@@ -1,0 +1,14 @@
+/uspevator.html
+/*.apk
+/android_uspevator/app/assets/
+/android_uspevator/out
+/android_uspevator/sdk
+/android_uspevator/tooling
+/android_uspevator/signing
+/build_uspevator/preview/dist/
+/build_uspevator/test-run.js
+__pycache__/
+*.py[cod]
+*.jks
+*.keystore
+*.p12

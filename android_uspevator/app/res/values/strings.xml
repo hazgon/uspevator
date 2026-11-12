@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">Успеватор</string>
+    <string name="widget_description">Задача, два отсчёта, финиш плана и управление таймером</string>
+</resources>

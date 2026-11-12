@@ -1,0 +1,371 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" content="#f6f5fa">
+  <title>Успеватор</title>
+  <style>
+/* APP_CSS */
+  </style>
+</head>
+<body>
+  <svg class="svg-library" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+    <symbol id="i-logo" viewBox="0 0 24 24"><path d="M12 2.8a9.2 9.2 0 1 0 9.2 9.2M12 5.8v6.3h5.4M17.5 3.4h3.1v3.1M20.6 3.4l-4.3 4.3"/></symbol>
+    <symbol id="i-play" viewBox="0 0 24 24"><path d="m8 5 12 7-12 7z"/></symbol>
+    <symbol id="i-pause" viewBox="0 0 24 24"><path d="M9 5v14M15 5v14"/></symbol>
+    <symbol id="i-skip" viewBox="0 0 24 24"><path d="m5 5 11 7-11 7zM19 5v14"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+    <symbol id="i-sound" viewBox="0 0 24 24"><path d="M11 5 6 9H3v6h3l5 4zM15 9a4 4 0 0 1 0 6M18 6a8 8 0 0 1 0 12"/></symbol>
+    <symbol id="i-muted" viewBox="0 0 24 24"><path d="M11 5 6 9H3v6h3l5 4zM16 9l5 6M21 9l-5 6"/></symbol>
+    <symbol id="i-reset" viewBox="0 0 24 24"><path d="M4 4v5h5M4.4 9a8 8 0 1 1 .9 7.3"/></symbol>
+    <symbol id="i-chart" viewBox="0 0 24 24"><path d="M4 4v16h16M7 15l5-5 4 2 4-6"/></symbol>
+    <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M4 12h15m-6-6 6 6-6 6"/></symbol>
+    <symbol id="i-down" viewBox="0 0 24 24"><path d="M12 5v14m-5-5 5 5 5-5"/></symbol>
+    <symbol id="i-up" viewBox="0 0 24 24"><path d="M12 19V5m-5 5 5-5 5 5"/></symbol>
+    <symbol id="i-grip" viewBox="0 0 24 24"><path d="M9 5h.01M15 5h.01M9 12h.01M15 12h.01M9 19h.01M15 19h.01" stroke-width="3.4"/></symbol>
+    <symbol id="i-edit" viewBox="0 0 24 24"><path d="m14.5 5.5 4 4M4 20l4.6-.8L20 7.8a1.7 1.7 0 0 0 0-2.4L18.6 4a1.7 1.7 0 0 0-2.4 0L4.8 15.4z"/></symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 10v6m4-6v6"/></symbol>
+    <symbol id="i-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.4 9a2.7 2.7 0 1 1 4.1 2.3c-1 .6-1.5 1.1-1.5 2.2m0 3.3h.01"/></symbol>
+    <symbol id="i-close" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></symbol>
+    <symbol id="i-layers" viewBox="0 0 24 24"><path d="m12 3 9 5-9 5-9-5zM3 12l9 5 9-5M3 16l9 5 9-5"/></symbol>
+    <symbol id="i-chev" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+    <symbol id="i-upload" viewBox="0 0 24 24"><path d="M12 16V4m-5 5 5-5 5 5M4 16v4h16v-4"/></symbol>
+    <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 4v12m-5-5 5 5 5-5M4 17v3h16v-3"/></symbol>
+    <symbol id="i-calendar" viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M8 3v4m8-4v4M4 10h16M8 14h2m4 0h2"/></symbol>
+    <symbol id="i-list" viewBox="0 0 24 24"><path d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01" /></symbol>
+    <symbol id="i-more" viewBox="0 0 24 24"><path d="M5 12h.01m7 0h.01m7 0h.01" stroke-width="3"/></symbol>
+    <symbol id="i-bolt" viewBox="0 0 24 24"><path d="m13 3-9 11h7l-1 7 10-11h-7z"/></symbol>
+    <symbol id="i-alert" viewBox="0 0 24 24"><path d="M10.3 4.6 3 17.2A1.9 1.9 0 0 0 4.6 20h14.8a1.9 1.9 0 0 0 1.6-2.8L13.7 4.6a2 2 0 0 0-3.4 0ZM12 9v4m0 3.4h.01"/></symbol>
+  </svg>
+  <header class="topbar">
+    <div class="container top-inner">
+      <a class="brand" href="#top" aria-label="Успеватор, в начало">
+        <span class="brand-icon"><svg class="icon" aria-hidden="true"><use href="#i-logo"/></svg></span>
+        <strong>Успеватор</strong>
+      </a>
+      <div class="top-actions">
+        <button class="btn btn-quiet icon-btn" id="sound-toggle" type="button" data-action="sound" aria-pressed="false" data-activate="true" aria-label="Активировать звук">
+          <svg class="icon" aria-hidden="true"><use href="#i-muted"/></svg>
+        </button>
+        <details class="app-menu" id="app-menu">
+          <summary class="btn btn-quiet icon-btn" aria-label="Меню"><svg class="icon" aria-hidden="true"><use href="#i-more"/></svg></summary>
+          <div class="menu-panel">
+            <label class="menu-theme field"><span>Тема</span><select id="theme-choice">
+              <option value="system">Как в системе</option>
+              <option value="light">Светлая</option>
+              <option value="dark">Тёмная</option>
+            </select></label>
+            <div id="android-tools" hidden>
+              <p class="menu-label">Экран, виджет и уведомления</p>
+              <label class="android-keep"><input type="checkbox" id="android-keep-screen"> Не гасить экран</label>
+              <label class="android-keep"><input type="checkbox" id="android-shade-timer"> Таймер в шторке</label>
+              <button type="button" class="btn btn-quiet menu-item" id="android-pin-widget">Добавить виджет</button>
+              <label class="menu-range field"><span>Громкость сигнала</span><input id="android-signal-volume" type="range" min="10" max="100" step="5" aria-label="Громкость сигнала"></label>
+            </div>
+            <button type="button" class="btn btn-quiet menu-item" data-action="show-templates">Шаблоны</button>
+            <button type="button" class="btn btn-quiet menu-item" data-action="run-history">История планов</button>
+            <button type="button" class="btn btn-quiet menu-item" data-action="data">Данные и диагностика</button>
+            <button type="button" class="btn btn-quiet menu-item" data-action="help">Методика</button>
+          </div>
+        </details>
+      </div>
+    </div>
+  </header>
+
+  <main id="top" class="container">
+    <noscript><p class="notice danger">Для работы Успеватора включите JavaScript в браузере.</p></noscript>
+    <p class="notice danger" id="storage-warning" role="alert" hidden></p>
+    <section class="focus card" aria-labelledby="focus-heading">
+      <div class="focus-content">
+        <div class="focus-top">
+          <p class="eyebrow" id="focus-kicker">План дня</p>
+          <span class="pill" id="phase-label" data-tone="purple"><span class="dot"></span><span>Планирование</span></span>
+        </div>
+        <div class="focus-title">
+          <h1 id="focus-heading">С чего начнём?</h1>
+          <button type="button" id="task-actions" class="btn icon-btn focus-quiet" data-action="task-actions" aria-label="Действия с задачей" hidden>
+            <svg class="icon" aria-hidden="true"><use href="#i-more"/></svg>
+          </button>
+        </div>
+        <p id="first-step" class="first-step" hidden></p>
+        <div class="focus-clocks" id="focus-clocks" hidden>
+          <div class="countdown countdown-primary" id="base-countdown">
+            <span>Оптимистично</span><strong id="base-clock">—</strong>
+          </div>
+          <div class="countdown" id="safe-countdown">
+            <span>С запасом</span><strong id="safe-clock">—</strong>
+          </div>
+        </div>
+        <p class="focus-fact" id="focus-fact" hidden><span id="fact-label">Работа</span> <span id="task-clock">00:00</span></p>
+        <div class="focus-buttons">
+          <button id="primary-action" class="btn focus-primary" type="button" data-action="go-add">
+            <svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg><span>Добавить задачу</span>
+          </button>
+          <button id="finish-btn" class="btn focus-primary" type="button" data-action="finish" hidden>
+            <svg class="icon" aria-hidden="true"><use href="#i-check"/></svg><span>Готово</span>
+          </button>
+          <button id="skip-btn" class="btn focus-secondary" type="button" data-action="skip" title="Перенести текущую задачу в конец очереди" aria-label="Пропустить задачу" hidden>
+            <svg class="icon" aria-hidden="true"><use href="#i-skip"/></svg><span>Пропустить</span>
+          </button>
+          <button id="repeat-btn" class="btn focus-secondary" type="button" data-action="repeat" hidden>
+            <svg class="icon" aria-hidden="true"><use href="#i-reset"/></svg><span>Повторить</span>
+          </button>
+          <button id="focus-templates" class="btn focus-secondary" type="button" data-action="choose-template">
+            <svg class="icon" aria-hidden="true"><use href="#i-layers"/></svg><span>Выбрать шаблон</span>
+          </button>
+        </div>
+        <button id="remaining-btn" class="btn focus-secondary remaining-action" type="button" data-action="remaining" hidden>
+          <svg class="icon" aria-hidden="true"><use href="#i-clock"/></svg><span>Уточнить остаток</span>
+        </button>
+        <button id="undo-finish" class="btn focus-quiet" type="button" data-action="undo" hidden>Отменить завершение</button>
+        <div class="focus-commitment" id="focus-commitment" hidden>
+          <div class="focus-eta">
+            <div class="focus-promise"><span id="focus-promise-label">Обещано к</span><strong id="focus-promise-time">—</strong></div>
+            <div class="focus-promise" id="focus-forecast" hidden><span id="focus-forecast-label">Прогноз с запасом</span><strong id="focus-forecast-time">—</strong></div>
+          </div>
+          <button type="button" class="focus-reserve" id="focus-reserve" data-action="plan-details" aria-label="Подробности буфера плана">
+            <span class="focus-reserve-content" aria-hidden="true">
+              <span class="risk-strip"><i id="risk-strip-marker"></i></span>
+              <span id="risk-strip-label"></span>
+            </span>
+          </button>
+        </div>
+        <p class="focus-hint" id="focus-hint" hidden></p>
+      </div>
+    </section>
+
+    <div class="planning-layout">
+    <section class="card queue-card" id="plan" aria-labelledby="queue-heading">
+      <details id="queue-details" open>
+        <summary id="queue-disclosure" class="disclosure-head">
+          <span class="section-icon"><svg class="icon" aria-hidden="true"><use href="#i-list"/></svg></span>
+          <span class="queue-title"><strong id="queue-heading">Список задач</strong><span class="subtext" id="queue-summary"></span></span>
+          <svg class="icon chevron" aria-hidden="true"><use href="#i-chev"/></svg>
+        </summary>
+        <div class="queue-tools row-buttons" id="queue-tools" hidden>
+          <button class="btn btn-soft" id="new-list" type="button" data-action="new-plan">
+            <svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg><span>Новый список</span>
+          </button>
+          <button class="btn btn-quiet" type="button" data-action="show-templates">Шаблоны</button>
+          <button class="btn btn-quiet" id="save-template" type="button" data-action="save-template" disabled>Сохранить как шаблон</button>
+          <button class="btn btn-quiet" id="reset-btn" type="button" data-action="reset" hidden>Сбросить выполнение</button>
+        </div>
+        <form id="add-form" class="add-form" novalidate>
+          <div class="add-fields">
+            <label class="field"><span>Задача</span><input id="task-name" name="name" placeholder="Что нужно сделать?" autocomplete="off" required></label>
+            <label class="field estimate-field"><span>Оптимистично, мин</span><input name="minTime" inputmode="decimal" placeholder="20" autocomplete="off" required></label>
+            <label class="field estimate-field"><span>С запасом, мин</span><input name="maxTime" inputmode="decimal" placeholder="35" autocomplete="off" required></label>
+            <button class="btn btn-primary add-button" type="submit"><svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg><span>Добавить</span></button>
+          </div>
+          <details id="add-step" class="first-step-field">
+            <summary><svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg> Первый шаг <span>по желанию</span></summary>
+            <label class="field"><span>С какого действия начать?</span><input name="firstStep" placeholder="Например, открыть письмо и выписать три вопроса" autocomplete="off"></label>
+          </details>
+          <p id="add-error" class="field-error" role="alert" hidden></p>
+        </form>
+        <p class="notice" id="done-plan-note" hidden>Нажмите «Новый список», чтобы добавить новые задачи, или «Повторить», чтобы заново выполнить этот набор.</p>
+        <div id="active-row"></div>
+        <ul id="pending-list" class="task-list" aria-label="Очередь задач"></ul>
+        <div id="drop-tail" class="drop-tail" data-drop-tail aria-hidden="true" hidden></div>
+        <div id="queue-empty" class="queue-empty">
+          <span class="empty-icon"><svg class="icon" aria-hidden="true"><use href="#i-list"/></svg></span>
+          <strong>Очередь пока пуста</strong>
+          <p>Добавьте первую задачу или посмотрите на готовый план.</p>
+          <button class="btn btn-quiet" type="button" data-action="demo">Загрузить пример <svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg></button>
+        </div>
+        <section id="history" class="history" aria-labelledby="history-heading" hidden>
+          <div class="history-head"><h3 id="history-heading">Результаты задач</h3><span id="history-summary"></span></div>
+          <ul id="history-list" class="task-list"></ul>
+        </section>
+      </details>
+    </section>
+
+
+    <details class="card templates" id="templates" open>
+      <summary class="disclosure-head" id="templates-summary">
+        <span class="title-line"><span class="section-icon"><svg class="icon" aria-hidden="true"><use href="#i-layers"/></svg></span><strong>Шаблоны</strong></span>
+        <span id="template-count" class="count-badge">0</span><svg class="icon chevron" aria-hidden="true"><use href="#i-chev"/></svg>
+      </summary>
+      <div class="row-buttons template-tools">
+        <button class="btn btn-quiet" type="button" data-action="go-queue">К списку задач</button>
+        <button class="btn btn-quiet" type="button" data-action="import">Импорт JSON</button>
+        <button class="btn btn-quiet" type="button" data-action="export" id="template-export" hidden>Экспорт</button>
+        <button class="btn btn-soft" type="button" data-action="save-template" id="template-save" hidden>Сохранить список</button>
+        <button class="btn btn-soft" type="button" data-action="new-plan" id="template-new" hidden>Новый список</button>
+      </div>
+      <p id="templates-empty" class="subtext">Добавьте задачи в список и сохраните его как шаблон или импортируйте готовые шаблоны.</p>
+      <p id="templates-done-note" class="subtext" hidden>Примените шаблон целиком или создайте новый список, чтобы добавлять задачи по одной.</p>
+      <div id="template-list"></div>
+    </details>
+    </div>
+
+    <details class="plan-details" id="plan-details">
+      <summary class="disclosure-head" id="plan-disclosure">
+        <svg class="icon" aria-hidden="true"><use href="#i-chart"/></svg><strong>Подробности плана</strong>
+        <svg class="icon chevron" aria-hidden="true"><use href="#i-chev"/></svg>
+      </summary>
+      <div class="workspace">
+      <section class="card buffer" aria-labelledby="buffer-heading">
+        <div class="card-head buffer-head">
+          <div class="title-line"><span class="section-icon"><svg class="icon" aria-hidden="true"><use href="#i-chart"/></svg></span><h2 id="buffer-heading">Диагональный буфер</h2></div>
+          <span class="pill" id="risk-badge" data-tone="neutral"><span class="dot"></span><span>Ожидание</span></span>
+        </div>
+        <div class="buffer-metrics">
+          <div>
+            <span class="metric-label" id="reserve-label">Резерв времени</span>
+            <strong class="metric-number" id="reserve-value">—</strong>
+          </div>
+          <div class="buffer-right">
+            <span class="metric-label">Израсходовано</span>
+            <strong class="metric-number" id="burn-value">—</strong>
+          </div>
+        </div>
+        <div class="buffer-track" id="buffer-track" role="meter" aria-label="Остаток резерва" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+          <div id="buffer-fill" data-tone="neutral"></div>
+        </div>
+        <div class="chart-wrap">
+          <svg id="chart" class="chart" viewBox="0 0 420 174" role="img" aria-label="График расхода буфера и прогресса"></svg>
+          <div class="chart-empty" id="chart-empty" hidden></div>
+        </div>
+        <div class="chart-caption"><p id="risk-tip">Добавьте задачи с двумя оценками времени.</p><span id="chart-progress" hidden></span></div>
+      </section>
+        <section class="card forecast" aria-labelledby="forecast-heading">
+          <div class="card-head">
+            <div class="title-line"><span class="section-icon"><svg class="icon" aria-hidden="true"><use href="#i-clock"/></svg></span><h2 id="forecast-heading">Прогноз финиша</h2></div>
+          </div>
+          <div class="finish-grid">
+            <div class="finish-box"><span id="earliest-label">По базовой оценке</span><strong id="earliest-time">—</strong><small id="earliest-day" hidden></small></div>
+            <div class="finish-box"><span id="guarded-label">С запасом задач</span><strong id="guarded-time">—</strong><small id="guarded-day" hidden></small></div>
+          </div>
+          <div class="protected-row"><span>Обещанный финиш</span><strong id="protected-time">—</strong></div>
+          <div class="fit" id="deadline-fit" data-tone="neutral">
+            <span class="dot"></span><div><strong id="fit-label">Срок не задан</strong><p id="fit-detail">Укажите, к какому времени нужно закончить.</p></div>
+          </div>
+          <details id="window-details" class="window-details">
+            <summary><svg class="icon" aria-hidden="true"><use href="#i-calendar"/></svg><span>Окно дня</span><span id="window-mini" class="window-mini"></span><svg class="icon chevron" aria-hidden="true"><use href="#i-chev"/></svg></summary>
+            <form id="window-form" class="window-form" novalidate>
+              <label class="field"><span>Запланированный старт</span><input id="planned-start" name="start" type="datetime-local"></label>
+              <label class="field"><span>Крайний срок</span><input id="deadline" name="finish" type="datetime-local"></label>
+              <p class="field-error" id="window-error" role="alert" hidden></p>
+              <div class="row-buttons">
+                <button class="btn btn-soft" type="submit">Сохранить окно</button>
+                <button class="btn btn-quiet" type="button" data-action="clear-window">Очистить</button>
+              </div>
+            </form>
+          </details>
+        </section>
+      </div>
+    </details>
+    <footer class="footer"><span>Успеватор</span><span><span class="dot"></span> Данные хранятся на устройстве</span></footer>
+  </main>
+  <div id="toast" class="toast" role="status" hidden></div>
+
+  <dialog id="template-picker" aria-labelledby="template-picker-title" aria-describedby="template-picker-description">
+    <div class="dialog-head">
+      <h2 id="template-picker-title">Выбрать шаблон</h2>
+      <button class="btn icon-btn btn-quiet" type="button" data-action="close-template-picker" aria-label="Закрыть"><svg class="icon" aria-hidden="true"><use href="#i-close"/></svg></button>
+    </div>
+    <p id="template-picker-description" class="dialog-copy"></p>
+    <ul id="template-choices" class="template-choices" aria-label="Сохранённые шаблоны" hidden></ul>
+    <p id="template-picker-error" class="field-error" role="alert" hidden></p>
+    <div class="dialog-buttons template-picker-actions">
+      <button class="btn btn-quiet" id="picker-add" type="button" data-action="go-add">Добавить задачи</button>
+      <button class="btn btn-quiet" id="picker-manage" type="button" data-action="show-templates">Управление шаблонами</button>
+      <button class="btn btn-primary" id="picker-import" type="button" data-action="import">Импорт JSON</button>
+    </div>
+  </dialog>
+  <dialog id="data-dialog" aria-labelledby="data-title">
+    <div class="dialog-head">
+      <h2 id="data-title">Данные и диагностика</h2>
+      <button class="btn icon-btn btn-quiet" type="button" data-action="close-data" aria-label="Закрыть"><svg class="icon" aria-hidden="true"><use href="#i-close"/></svg></button>
+    </div>
+    <section class="data-card" aria-labelledby="data-heading">
+      <div><h2 id="data-heading">Импорт и экспорт</h2><p class="subtext">JSON для переноса шаблонов или всего плана.</p></div>
+      <div class="row-buttons data-actions">
+        <input id="import-file" type="file" accept=".json,application/json" hidden>
+        <button class="btn btn-quiet" type="button" data-action="import"><svg class="icon" aria-hidden="true"><use href="#i-upload"/></svg>Импорт JSON</button>
+        <button class="btn btn-quiet" type="button" data-action="export"><svg class="icon" aria-hidden="true"><use href="#i-download"/></svg>Экспорт шаблонов</button>
+        <button class="btn btn-soft" type="button" data-action="backup"><svg class="icon" aria-hidden="true"><use href="#i-download"/></svg>Резервная копия</button>
+      </div>
+    </section>
+
+    <details class="diagnostics">
+      <summary>Диагностика <svg class="icon chevron" aria-hidden="true"><use href="#i-chev"/></svg></summary>
+      <div class="diagnostics-content">
+        <label class="field"><span>Уровень журнала</span><select id="log-level"><option>DEBUG</option><option>INFO</option><option>WARN</option><option>ERROR</option><option>CRITICAL</option></select></label>
+        <button class="btn btn-soft" type="button" data-action="sound-test"><svg class="icon" aria-hidden="true"><use href="#i-sound"/></svg>Проверить звук</button>
+        <button class="btn btn-soft" type="button" data-action="tests">Запустить тесты</button>
+        <output id="test-result" aria-live="polite"></output>
+      </div>
+    </details>
+
+  </dialog>
+
+  <dialog id="runs-dialog" aria-labelledby="runs-title">
+    <div class="dialog-head">
+      <h2 id="runs-title">История планов</h2>
+      <button class="btn icon-btn btn-quiet" type="button" data-action="close-runs" aria-label="Закрыть"><svg class="icon" aria-hidden="true"><use href="#i-close"/></svg></button>
+    </div>
+    <div id="run-history"></div>
+  </dialog>
+  <dialog id="action-dialog" aria-labelledby="dialog-title">
+    <div class="dialog-head">
+      <h2 id="dialog-title"></h2>
+      <button class="btn icon-btn btn-quiet" type="button" data-action="close-dialog" aria-label="Закрыть"><svg class="icon" aria-hidden="true"><use href="#i-close"/></svg></button>
+    </div>
+    <form id="dialog-form" novalidate>
+      <div id="dialog-body"></div>
+      <p id="dialog-error" class="field-error" role="alert" hidden></p>
+      <div class="dialog-buttons">
+        <button class="btn btn-quiet" type="button" data-action="close-dialog">Отмена</button>
+        <button class="btn btn-primary" id="dialog-confirm" type="submit">Сохранить</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="help-dialog" class="help-dialog" aria-labelledby="help-title">
+    <div class="dialog-head">
+      <h2 id="help-title">Как работает Успеватор</h2>
+      <button class="btn icon-btn btn-quiet" type="button" data-action="close-help" aria-label="Закрыть"><svg class="icon" aria-hidden="true"><use href="#i-close"/></svg></button>
+    </div>
+    <div class="method">
+      <p>В управлении критической цепью общий резерв защищает срок сдачи, а питающие буферы защищают критическую цепь от задержек боковых веток. Здесь один исполнитель и последовательная очередь, поэтому используется один резерв дня.</p>
+      <h3>1. Соберите план и упростите старт</h3>
+      <p>Для каждой задачи задайте базовую оценку при нормальном ходе работы и оценку с запасом. Например, 20 и 35 минут. Вся разница между оценками складывается в один резерв дня. Для трудной задачи запишите конкретное первое действие, а в «Окне дня» укажите, когда приступите. Например, «в 10:00 открою письмо и выпишу вопросы».</p>
+      <p>Синдром студента проявляется, когда работа откладывается до момента, когда срок уже близко. Запланированный старт делает задержку видимой, а конкретный первый шаг даёт действие, с которого можно начать.</p>
+      <h3>2. Запустите одну задачу</h3>
+      <p>После «Готово» начинается следующая задача. Оценки времени служат ориентиром. «Уточнить остаток» обновляет прогноз и отмечает частичную готовность. Между такими отметками рабочий таймер уменьшает прогнозный остаток задачи. Горизонтальную позицию графика он сам по себе не меняет.</p>
+      <p>Пауза замораживает время работы над задачей, а время до финиша продолжает идти. «Пропустить» переносит задачу в конец очереди и сохраняет уже потраченное время. Для нового подхода берётся последняя введённая оценка остатка или исходная база. Если часть работы сделана, уточните остаток перед переносом.</p>
+      <h3>3. Смотрите на расход вместе с прогрессом</h3>
+      <p><strong>По вертикали</strong> отложен расход резерва. Из суммы календарного времени с начала плана и оценённого остатка работ вычитается исходная база. Досрочное выполнение может дать отрицательный расход. Опоздание к запланированному старту тоже уменьшает резерв.</p>
+      <p><strong>По горизонтали</strong> — готовность по базовым минутам задач. Завершение даёт полный вес задачи, а введённый остаток даёт подтверждённую часть. При нулевой сумме базовых оценок используется доля закрытых задач.</p>
+      <p>Порог внимания растёт от 5% до 45% по мере готовности, а порог вмешательства — от 55% до 95%. Это стартовые настройки графика. Шкала над ним отдельно показывает абсолютный остаток. Точки за пределами 0–100% отмечаются на краю графика, точный процент виден над ним.</p>
+      <h3>4. Проверяйте прогноз и срок</h3>
+      <p>Обещанный финиш равен началу плана плюс сумма оценок с запасом. При старте он фиксируется. Текущий прогноз пересчитывается по оставшейся работе и может сдвинуться. Если исчерпана верхняя оценка текущей задачи, уточните остаток для нового прогноза. Полоска риска показывает зону диагонального буфера всего плана.</p>
+      <p>Звук включён по умолчанию и активируется при первом нажатии. Два коротких сигнала отмечают конец оптимистичной оценки текущей задачи. Затем пики учащаются по мере расхода запаса этой задачи. На границе оценки с запасом они переходят в непрерывный писк. Пауза, переход к другой задаче и выключение звука останавливают его. Проверка доступна в «Диагностике».</p>
+      <h3>Следующий список и шаблоны</h3>
+      <p>«Новый список» открывает пустой план. Перед очисткой можно сохранить текущие задачи как шаблон. «Повторить список» возвращает тот же набор задач в очередь. Чтобы сохранить новый набор, добавьте задачи и нажмите «Сохранить как шаблон».</p>
+      <h3>Хранение и перенос</h3>
+      <p>Открывайте тот же HTML в том же браузере, чтобы продолжить план. Если закрыть файл при работающем таймере, прошедшее время будет учтено при открытии. Экспорт шаблонов сохраняет только шаблоны. Резервная копия сохраняет весь план и открывает выполнявшийся план на паузе. Импорт шаблонов заменяет только набор шаблонов.</p>
+      <p>Доступ к локальному хранилищу зависит от браузера и способа открытия HTML. Для переноса на другое устройство скачайте резервную копию.</p>
+      <h3>Источники</h3>
+      <ul class="sources">
+        <li><a href="https://www.pmi.org/learning/library/2019/04/07/15/22/critical-chain-project-management-5852" target="_blank" rel="noopener noreferrer">PMI · Improving focus and predictability with critical chain project management</a></li>
+        <li><a href="https://stottlerhenke.com/wp-content/uploads/2021/02/2010-01-24-IEEE-Aerospace-Critical-Chain-Project-Management-Motivation-and-Overview-paper-FINAL.pdf" target="_blank" rel="noopener noreferrer">IEEE Aerospace · Critical Chain Project Management, Motivation &amp; Overview</a></li>
+        <li><a href="https://habr.com/ru/articles/731524/" target="_blank" rel="noopener noreferrer">Теория ограничений Голдратта и проектное управление. Диагональный буфер</a></li>
+        <li><a href="https://doi.org/10.1016/S0272-6963(01)00054-7" target="_blank" rel="noopener noreferrer">Herroelen и Leus · On the merits and pitfalls of critical chain scheduling</a></li>
+        <li><a href="https://pubmed.ncbi.nlm.nih.gov/17201571/" target="_blank" rel="noopener noreferrer">Steel · The nature of procrastination</a></li>
+        <li><a href="https://doi.org/10.1016/S0065-2601(06)38002-1" target="_blank" rel="noopener noreferrer">Gollwitzer и Sheeran · Implementation Intentions and Goal Achievement</a></li>
+      </ul>
+    </div>
+    <div class="dialog-buttons"><button class="btn btn-primary" type="button" data-action="close-help">Понятно</button></div>
+  </dialog>
+  <script>
+/* APP_JS */
+  </script>
+</body>
+</html>
