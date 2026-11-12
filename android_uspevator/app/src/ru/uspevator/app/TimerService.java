@@ -75,7 +75,6 @@ public final class TimerService extends Service {
         power = (PowerManager) getSystemService(POWER_SERVICE);
         wakeLock = power.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "Uspevator:TaskSignal");
         wakeLock.setReferenceCounted(false);
-        PlanNotification.createChannel(this);
         IntentFilter filter = new IntentFilter(Intent.ACTION_SCREEN_ON);
         filter.addAction(Intent.ACTION_SCREEN_OFF);
         if (Build.VERSION.SDK_INT >= 33) registerReceiver(screen, filter, Context.RECEIVER_NOT_EXPORTED);

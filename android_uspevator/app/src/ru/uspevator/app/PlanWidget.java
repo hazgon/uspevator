@@ -16,6 +16,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.SystemClock;
+import android.util.DisplayMetrics;
 import android.util.Log;
 import android.util.SizeF;
 import android.util.TypedValue;
@@ -97,6 +98,11 @@ public final class PlanWidget extends AppWidgetProvider {
 
     @Override public void onReceive(Context context, Intent intent) {
         super.onReceive(context, intent);
+        if (Intent.ACTION_LOCALE_CHANGED.equals(intent.getAction())) {
+            updateAll(context);
+            TimerService.reconcile(context, false);
+            return;
+        }
         if (PlanNotification.DISMISS.equals(intent.getAction())) {
             PlanStore.preferences(context).edit().putBoolean(PlanStore.SHADE_TIMER, false).apply();
             TimerService.reconcile(context, false);
@@ -107,7 +113,7 @@ public final class PlanWidget extends AppWidgetProvider {
         boolean saved = PlanStore.widgetAction(context, action, intent.getStringExtra(TOKEN));
         updateAll(context);
         TimerService.reconcile(context, saved);
-        if (!saved) Toast.makeText(context, "План обновился. Повторите действие.", Toast.LENGTH_SHORT).show();
+        if (!saved) Toast.makeText(context, AppLanguage.text(context, R.string.widget_stale), Toast.LENGTH_SHORT).show();
     }
 
     static PlanState.Snapshot snapshot(PlanState plan, long now) {
@@ -127,7 +133,7 @@ public final class PlanWidget extends AppWidgetProvider {
         PlanState.Snapshot view = snapshot(plan, now);
         String token = plan == null ? null : plan.token;
         boolean undo = PlanStore.canUndoFinish(PlanStore.read(context));
-        Bitmap strip = view.hasPlan ? strip(view.riskPosition) : null;
+        Context localized = AppLanguage.forPlan(context, plan);
         for (int id : ids) {
             Bundle options = manager.getAppWidgetOptions(id);
             if (Build.VERSION.SDK_INT >= 31) {
@@ -135,27 +141,32 @@ public final class PlanWidget extends AppWidgetProvider {
                 if (sizes != null && !sizes.isEmpty() && sizes.size() <= 16) {
                     Map<SizeF, RemoteViews> layouts = new LinkedHashMap<>();
                     for (SizeF size : sizes) {
-                        layouts.put(size, card(context, id, view, now, token, undo,
-                            Math.round(size.getWidth()), Math.round(size.getHeight()), strip));
+                        layouts.put(size, card(localized, id, view, now, token, undo,
+                            Math.round(size.getWidth()), Math.round(size.getHeight())));
                     }
                     manager.updateAppWidget(id, new RemoteViews(layouts));
                     continue;
                 }
             }
-            int height = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 128);
-            int width = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 244);
-            manager.updateAppWidget(id, card(context, id, view, now, token, undo, width, height, strip));
+            int minHeight = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 128);
+            int minWidth = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 244);
+            int maxHeight = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT, minHeight);
+            int maxWidth = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH, minWidth);
+            RemoteViews portrait = card(localized, id, view, now, token, undo, minWidth, maxHeight);
+            RemoteViews layout = minWidth == maxWidth && minHeight == maxHeight ? portrait
+                : new RemoteViews(card(localized, id, view, now, token, undo, maxWidth, minHeight), portrait);
+            manager.updateAppWidget(id, layout);
         }
     }
 
     static RemoteViews shadeCard(Context context, int id, PlanState.Snapshot view, long now, String token) {
         int screenWidth = context.getResources().getConfiguration().screenWidthDp;
         return card(context, id, view, now, token, PlanStore.canUndoFinish(PlanStore.read(context)),
-            Math.min(420, Math.max(220, screenWidth - 44)), 190, view.hasPlan ? strip(view.riskPosition) : null);
+            Math.min(420, Math.max(220, screenWidth - 44)), 190);
     }
 
     private static RemoteViews card(Context context, int id, PlanState.Snapshot view, long now, String token,
-                                    boolean undo, int width, int height, Bitmap strip) {
+                                    boolean undo, int width, int height) {
         RemoteViews card = new RemoteViews(context.getPackageName(), R.layout.plan_widget);
         long realtime = SystemClock.elapsedRealtime();
         boolean running = PlanState.RUNNING.equals(view.phase);
@@ -168,28 +179,30 @@ public final class PlanWidget extends AppWidgetProvider {
         boolean exhausted = active && view.clock.guarded <= 0;
         card.setOnClickPendingIntent(R.id.widget_root, open(context, id, null, null));
         card.setOnClickPendingIntent(R.id.widget_title_block, open(context, id, active ? "task-actions" : null, token));
-        card.setTextViewText(R.id.widget_task, shortText(active ? view.task : done ? "План завершён"
-            : view.hasPlan ? "Готово к старту" : "Пока нет задач"));
+        card.setTextViewText(R.id.widget_task, shortText(active ? view.task : context.getString(
+            done ? R.string.plan_complete : view.hasPlan ? R.string.ready_to_start : R.string.no_tasks)));
         card.setTextViewTextSize(R.id.widget_task, TypedValue.COMPLEX_UNIT_SP, roomy ? 19 : 17);
-        card.setTextViewText(R.id.widget_status, active ? "Задача " + (view.completed + 1) + " из " + view.total
-            + (paused ? " · На паузе" : "") : PlanState.IDLE.equals(view.phase) && view.hasPlan
-                ? "План · расчёт " + time(now, now) : "План дня");
+        card.setTextViewText(R.id.widget_status, active ? context.getString(R.string.task_position, view.completed + 1, view.total)
+            : PlanState.IDLE.equals(view.phase) && view.hasPlan ? context.getString(R.string.plan_preview, time(now, now))
+            : context.getString(R.string.plan_today));
         show(card, R.id.widget_status, !paused || view.pauseMs < 0);
         show(card, R.id.widget_pause, paused && view.pauseMs >= 0);
-        card.setChronometer(R.id.widget_pause, realtime - Math.max(0, view.pauseMs), "Пауза %s", paused && view.pauseMs >= 0);
+        card.setChronometer(R.id.widget_pause, realtime - Math.max(0, view.pauseMs),
+            context.getString(R.string.pause_duration), paused && view.pauseMs >= 0);
 
         card.setImageViewResource(R.id.widget_sound, view.sound ? R.drawable.volume_on : R.drawable.volume_off);
-        card.setContentDescription(R.id.widget_sound, view.sound ? "Выключить звук" : "Включить звук");
+        card.setContentDescription(R.id.widget_sound, context.getString(view.sound ? R.string.mute_sound : R.string.unmute_sound));
         card.setOnClickPendingIntent(R.id.widget_sound, token == null ? open(context, id, "sound", null)
             : control(context, id, "sound", token));
         show(card, R.id.widget_undo, undo);
+        card.setContentDescription(R.id.widget_undo, context.getString(R.string.undo_completion));
         if (undo) card.setOnClickPendingIntent(R.id.widget_undo, control(context, id, "undo", token));
 
         show(card, R.id.widget_step, roomy && active && !view.step.isEmpty());
-        card.setTextViewText(R.id.widget_step, "Первый шаг · " + shortText(view.step));
+        card.setTextViewText(R.id.widget_step, context.getString(R.string.first_step, shortText(view.step)));
         show(card, R.id.widget_clocks, active);
         show(card, R.id.widget_fact, active || done);
-        float widthInside = Math.max(190, width - 16);
+        int widthInside = Math.max(32, width - 16);
         if (active) {
             float clockColumn = widthInside * 1.12f / 4.24f;
             int baseSize = clockSize(view.clock.optimistic, clockColumn, tight ? 16 : 22);
@@ -198,64 +211,70 @@ public final class PlanWidget extends AppWidgetProvider {
                 null, baseSize, view.clock.optimistic <= 0 ? WARNING : Color.WHITE);
             clock(card, R.id.safe_static, R.id.safe_live, view.clock.guarded, realtime, running, true,
                 null, safeSize, view.clock.guarded <= 0 ? WARNING : Color.WHITE);
-            card.setTextViewText(R.id.base_label, view.clock.optimistic < 0 ? "Сверх оптим." : width < 320 ? "Оптим." : "Оптимистично");
-            card.setTextViewText(R.id.safe_label, view.clock.guarded < 0 ? "Сверх оценки" : "С запасом");
+            card.setTextViewText(R.id.base_label, context.getString(
+                view.clock.optimistic < 0 ? R.string.over_optimistic : width < 320 ? R.string.optimistic_short : R.string.optimistic));
+            card.setTextViewText(R.id.safe_label, context.getString(view.clock.guarded < 0 ? R.string.over_estimate : R.string.buffered));
         } else {
             card.setChronometer(R.id.base_live, realtime, null, false);
             card.setChronometer(R.id.safe_live, realtime, null, false);
         }
         clock(card, R.id.fact_static, R.id.fact_live, view.elapsed, realtime, running, false,
-            width < 260 ? null : done ? "Время плана " : "Работа ", 11, META);
+            width < 260 ? null : context.getString(done ? R.string.plan_time : R.string.work_time) + " ", 11, META);
         show(card, R.id.widget_plan, view.hasPlan);
         show(card, R.id.widget_buffer, view.hasPlan);
         if (view.hasPlan) {
             boolean draft = PlanState.IDLE.equals(view.phase);
             boolean draftLength = draft && (!view.scheduled || view.promise == view.forecast);
-            String promiseLabel = draft ? (view.scheduled ? "Финиш по плану" : "Финиш с запасом")
-                : active ? "Обещано" : "Обещано к";
+            String promiseLabel = context.getString(draft ? (view.scheduled ? R.string.planned_finish : R.string.finish_buffered)
+                : active ? R.string.promised : R.string.promised_by);
             float column = widthInside / (active ? 4.24f : 2);
-            finishTime(card, R.id.promise_label, R.id.promise_time, promiseLabel, time(view.promise, now), column);
-            String forecastLabel = exhausted ? "Остаток" : done ? "Завершено в"
-                : draftLength ? "Длительность" : draft ? "Если начать сейчас" : "Прогноз";
-            String forecast = exhausted ? "Уточнить" : draftLength ? PlanState.formatClock(view.baseline + view.buffer)
+            finishTime(context, card, R.id.promise_label, R.id.promise_time, promiseLabel, time(view.promise, now), column);
+            String forecastLabel = context.getString(exhausted ? R.string.remaining : done ? R.string.finished_at
+                : draftLength ? R.string.duration : draft ? R.string.if_start_now : R.string.forecast);
+            String forecast = exhausted ? context.getString(R.string.update_estimate) : draftLength ? PlanState.formatClock(view.baseline + view.buffer)
                 : time(done ? view.finishedAt : view.forecast, now);
-            finishTime(card, R.id.forecast_label, R.id.forecast_time, forecastLabel, forecast, column);
+            finishTime(context, card, R.id.forecast_label, R.id.forecast_time, forecastLabel, forecast, column);
             card.setTextColor(R.id.forecast_time, exhausted || (!done && !draft && view.forecast - view.promise >= 60_000)
                 ? WARNING : Color.WHITE);
             if (exhausted) card.setTextViewTextSize(R.id.forecast_time, TypedValue.COMPLEX_UNIT_SP, 11);
             card.setOnClickPendingIntent(R.id.forecast_block, open(context, id, exhausted ? "remaining" : null, token));
-            card.setImageViewBitmap(R.id.widget_strip, strip);
-            String risk = riskLabel(view.risk);
-            card.setTextViewText(R.id.widget_risk, "Буфер · " + risk);
-            card.setContentDescription(R.id.widget_strip, "Буфер плана · " + risk);
+            String risk = riskLabel(context, view.risk);
+            String riskText = context.getString(R.string.widget_buffer, risk);
+            int labelWidth = riskWidth(context, riskText);
+            boolean showRisk = !tight && widthInside - labelWidth >= 96;
+            card.setImageViewBitmap(R.id.widget_strip, strip(context, widthInside - (showRisk ? labelWidth : 0), view.riskPosition));
+            show(card, R.id.widget_risk, showRisk);
+            card.setTextViewText(R.id.widget_risk, riskText);
+            card.setContentDescription(R.id.widget_strip, context.getString(R.string.plan_buffer, risk));
         }
 
         show(card, R.id.widget_next, (roomy && active && !view.next.isEmpty()) || (done && height >= 132));
         if (done) {
             long delta = view.finishedAt - view.promise;
-            card.setTextViewText(R.id.widget_next, delta == 0 ? "Ровно к обещанному сроку"
-                : (delta < 0 ? "Раньше на " : "Позже на ") + PlanState.formatClock(Math.abs(delta)));
-        } else card.setTextViewText(R.id.widget_next, "Далее · " + shortText(view.next));
+            card.setTextViewText(R.id.widget_next, delta == 0 ? context.getString(R.string.finished_on_promise)
+                : context.getString(delta < 0 ? R.string.finished_early : R.string.finished_late, PlanState.formatClock(Math.abs(delta))));
+        } else card.setTextViewText(R.id.widget_next, context.getString(R.string.next_task, shortText(view.next)));
 
         if (active) {
-            button(card, R.id.widget_primary, paused ? "Продолжить" : "Пауза",
+            button(card, R.id.widget_primary, context.getString(paused ? R.string.resume : R.string.pause),
                 control(context, id, paused ? "start" : "pause", token), paused);
-            button(card, R.id.widget_finish, "Готово", control(context, id, "finish", token), !paused);
+            button(card, R.id.widget_finish, context.getString(R.string.done), control(context, id, "finish", token), !paused);
         } else if (done) {
-            button(card, R.id.widget_primary, "Новый список", open(context, id, "new-plan", token), true);
-            button(card, R.id.widget_finish, "Повторить", open(context, id, "repeat", token), false);
+            button(card, R.id.widget_primary, context.getString(R.string.new_list), open(context, id, "new-plan", token), true);
+            button(card, R.id.widget_finish, context.getString(R.string.repeat), open(context, id, "repeat", token), false);
         } else {
-            button(card, R.id.widget_primary, view.hasPlan ? "Начать" : "Добавить задачу", view.hasPlan
+            button(card, R.id.widget_primary, context.getString(view.hasPlan ? R.string.start : R.string.add_task), view.hasPlan
                 ? control(context, id, "start", token) : open(context, id, "add", token), true);
             if (!view.hasPlan) {
-                button(card, R.id.widget_finish, "Выбрать шаблон", open(context, id, "choose-template", token), false);
+                button(card, R.id.widget_finish, context.getString(R.string.choose_template),
+                    open(context, id, "choose-template", token), false);
             }
         }
         show(card, R.id.widget_finish, active || done || !view.hasPlan);
         show(card, R.id.widget_skip, canDefer);
         if (canDefer) {
-            button(card, R.id.widget_skip, "Пропустить", control(context, id, "skip", token), false);
-            card.setContentDescription(R.id.widget_skip, "Перенести текущую задачу в конец очереди");
+            button(card, R.id.widget_skip, context.getString(R.string.skip), control(context, id, "skip", token), false);
+            card.setContentDescription(R.id.widget_skip, context.getString(R.string.skip_description));
         }
         float actionSize = canDefer && width < 255 ? 11 : 13;
         for (int button : new int[]{R.id.widget_primary, R.id.widget_finish, R.id.widget_skip}) {
@@ -263,8 +282,6 @@ public final class PlanWidget extends AppWidgetProvider {
             if (Build.VERSION.SDK_INT >= 31) card.setViewLayoutHeight(button, tight ? 32 : roomy ? 42 : 36,
                 TypedValue.COMPLEX_UNIT_DIP);
         }
-        show(card, R.id.widget_risk, !tight);
-        if (Build.VERSION.SDK_INT >= 31) card.setViewLayoutHeight(R.id.widget_strip, tight ? 6 : 8, TypedValue.COMPLEX_UNIT_DIP);
         return card;
     }
 
@@ -294,11 +311,12 @@ public final class PlanWidget extends AppWidgetProvider {
         card.setOnClickPendingIntent(id, action);
     }
 
-    private static void finishTime(RemoteViews card, int captionId, int valueId, String caption, String label, float width) {
+    private static void finishTime(Context context, RemoteViews card, int captionId, int valueId, String caption, String label, float width) {
         String shown = label, heading = caption;
         if (label.length() >= 11 && label.charAt(5) == ' ' && width < 85) {
             shown = label.substring(0, 5);
-            heading = (captionId == R.id.promise_label ? "К " : "На ") + label.substring(6, 11);
+            heading = context.getString(captionId == R.id.promise_label ? R.string.due_date_short : R.string.forecast_date_short,
+                label.substring(6, 11));
         }
         card.setTextViewText(captionId, heading);
         card.setTextViewText(valueId, shown);
@@ -328,31 +346,44 @@ public final class PlanWidget extends AppWidgetProvider {
         return new SimpleDateFormat(pattern, Locale.ROOT).format(new Date(value));
     }
 
-    private static String riskLabel(String risk) {
+    private static String riskLabel(Context context, String risk) {
         switch (risk) {
-            case "green": return "В норме";
-            case "yellow": return "Внимание";
-            case "red": return "Под угрозой";
-            case "over": return "Исчерпан";
-            default: return "Без запаса";
+            case "green": return context.getString(R.string.risk_green);
+            case "yellow": return context.getString(R.string.risk_yellow);
+            case "red": return context.getString(R.string.risk_red);
+            case "over": return context.getString(R.string.risk_over);
+            default: return context.getString(R.string.risk_neutral);
         }
     }
 
-    private static Bitmap strip(double position) {
-        Bitmap image = Bitmap.createBitmap(360, 28, Bitmap.Config.ARGB_8888);
+    private static int riskWidth(Context context, String label) {
+        DisplayMetrics metrics = context.getResources().getDisplayMetrics();
+        Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        paint.setTextSize(TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, 11, metrics));
+        return (int) Math.ceil(paint.measureText(label) / metrics.density) + 6;
+    }
+
+    private static Bitmap strip(Context context, int widthDp, double position) {
+        // Use dp-sized pixels to keep the set of responsive bitmaps small in RemoteViews.
+        float density = context.getResources().getDisplayMetrics().density;
+        int height = Math.round(context.getResources().getDimension(R.dimen.widget_strip_height) / density);
+        Bitmap image = Bitmap.createBitmap(Math.max(32, Math.min(900, widthDp)), height, Bitmap.Config.ARGB_8888);
+        image.setDensity(Bitmap.DENSITY_NONE);
         Canvas canvas = new Canvas(image);
         Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
         int[] colors = {0xff80cfab, 0xffffd27c, 0xfff697a3};
-        float left = 10, width = 340;
+        float centerY = image.getHeight() / 2f;
+        float radius = centerY - .5f;
+        float left = centerY, width = image.getWidth() - 2 * left;
         for (int i = 0; i < colors.length; i++) {
             paint.setColor(colors[i]);
-            canvas.drawRect(left + i * width / 3, 10, left + (i + 1) * width / 3, 18, paint);
+            canvas.drawRect(left + i * width / 3, centerY - 1.5f, left + (i + 1) * width / 3, centerY + 1.5f, paint);
         }
-        float marker = left + (float) position / 100 * width;
+        float marker = left + (float) Math.max(0, Math.min(100, position)) / 100 * width;
         paint.setColor(Color.WHITE);
-        canvas.drawCircle(marker, 14, 9, paint);
+        canvas.drawCircle(marker, centerY, radius, paint);
         paint.setColor(0xff30214d);
-        canvas.drawCircle(marker, 14, 6, paint);
+        canvas.drawCircle(marker, centerY, radius - 1.5f, paint);
         return image;
     }
 }

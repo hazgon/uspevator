@@ -70,6 +70,7 @@ final class PlanState {
     boolean running() { return RUNNING.equals(phase()); }
     boolean active() { return running() || PAUSED.equals(phase()); }
     boolean sound() { return settings.optBoolean("sound", true); }
+    String language() { return settings.optString("language", "system"); }
     String serialize() { return json.toString(); }
 
     private int firstOpenIndex(int from) throws JSONException {

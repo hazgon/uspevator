@@ -11,7 +11,7 @@ def saved_tasks(state):
 
 def run(browser, source, width, height):
     mobile = width < 600
-    page = browser.new_page(viewport={'width': width, 'height': height}, is_mobile=mobile, has_touch=mobile)
+    page = browser.new_page(viewport={'width': width, 'height': height}, is_mobile=mobile, has_touch=mobile, locale='ru-RU')
     errors = []
     page.on('pageerror', lambda error: errors.append(str(error)))
     page.clock.install(time=1_800_000_000_000)

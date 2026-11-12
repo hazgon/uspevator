@@ -9,7 +9,7 @@
             <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical">
                 <FrameLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1">
                     <TextView android:id="@+id/widget_status" style="@style/WidgetMeta" android:layout_width="match_parent"
-                        android:layout_height="wrap_content" android:text="План дня"/>
+                        android:layout_height="wrap_content" android:text="@string/plan_today"/>
                     <Chronometer android:id="@+id/widget_pause" style="@style/WidgetMeta" android:layout_width="match_parent"
                         android:layout_height="wrap_content" android:visibility="gone"/>
                 </FrameLayout>
@@ -23,14 +23,14 @@
             </LinearLayout>
             <TextView android:id="@+id/widget_task" style="@style/WidgetMeta" android:layout_width="match_parent"
                 android:layout_height="wrap_content" android:textSize="17sp" android:textColor="#ffffff"
-                android:textStyle="bold" android:text="Пока нет задач"/>
+                android:textStyle="bold" android:text="@string/no_tasks"/>
         </LinearLayout>
         <ImageButton android:id="@+id/widget_undo" android:layout_width="32dp" android:layout_height="32dp"
             android:padding="5dp" android:scaleType="fitCenter" android:background="@android:color/transparent"
-            android:src="@drawable/undo_finish" android:visibility="gone" android:contentDescription="Отменить завершение"/>
+            android:src="@drawable/undo_finish" android:visibility="gone" android:contentDescription="@string/undo_completion"/>
         <ImageButton android:id="@+id/widget_sound" android:layout_width="32dp" android:layout_height="32dp"
             android:padding="5dp" android:scaleType="fitCenter" android:background="@android:color/transparent"
-            android:src="@drawable/volume_on" android:contentDescription="Выключить звук"/>
+            android:src="@drawable/volume_on" android:contentDescription="@string/mute_sound"/>
     </LinearLayout>
     <TextView android:id="@+id/widget_step" style="@style/WidgetMeta" android:layout_width="match_parent"
         android:layout_height="wrap_content" android:visibility="gone"/>
@@ -40,7 +40,7 @@
             <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
                 android:orientation="vertical">
                 <TextView android:id="@+id/base_label" style="@style/WidgetMeta" android:layout_width="match_parent"
-                    android:layout_height="wrap_content" android:text="Оптим."/>
+                    android:layout_height="wrap_content" android:text="@string/optimistic_short"/>
                 <FrameLayout android:layout_width="match_parent" android:layout_height="wrap_content">
                     <TextView android:id="@+id/base_static" style="@style/WidgetClock" android:layout_width="match_parent"
                         android:layout_height="wrap_content"/>
@@ -51,7 +51,7 @@
             <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
                 android:orientation="vertical">
                 <TextView android:id="@+id/safe_label" style="@style/WidgetMeta" android:layout_width="match_parent"
-                    android:layout_height="wrap_content" android:text="С запасом"/>
+                    android:layout_height="wrap_content" android:text="@string/buffered"/>
                 <FrameLayout android:layout_width="match_parent" android:layout_height="wrap_content">
                     <TextView android:id="@+id/safe_static" style="@style/WidgetClock" android:layout_width="match_parent"
                         android:layout_height="wrap_content"/>
@@ -65,14 +65,14 @@
             <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
                 android:orientation="vertical">
                 <TextView android:id="@+id/promise_label" style="@style/WidgetMeta" android:layout_width="match_parent"
-                    android:layout_height="wrap_content" android:text="Обещано к"/>
+                    android:layout_height="wrap_content" android:text="@string/promised_by"/>
                 <TextView android:id="@+id/promise_time" style="@style/WidgetClock" android:layout_width="match_parent"
                     android:layout_height="wrap_content" android:textSize="16sp"/>
             </LinearLayout>
             <LinearLayout android:id="@+id/forecast_block" android:layout_width="0dp" android:layout_height="wrap_content"
                 android:layout_weight="1" android:orientation="vertical">
                 <TextView android:id="@+id/forecast_label" style="@style/WidgetMeta" android:layout_width="match_parent"
-                    android:layout_height="wrap_content" android:text="Прогноз"/>
+                    android:layout_height="wrap_content" android:text="@string/forecast"/>
                 <TextView android:id="@+id/forecast_time" style="@style/WidgetClock" android:layout_width="match_parent"
                     android:layout_height="wrap_content" android:textSize="16sp"/>
             </LinearLayout>
@@ -80,21 +80,21 @@
     </LinearLayout>
     <LinearLayout android:id="@+id/widget_buffer" android:layout_width="match_parent" android:layout_height="wrap_content"
         android:gravity="center_vertical" android:visibility="gone">
-        <ImageView android:id="@+id/widget_strip" android:layout_width="0dp" android:layout_height="8dp"
-            android:layout_weight="1" android:scaleType="fitXY" android:contentDescription="Зоны буфера плана"/>
+        <ImageView android:id="@+id/widget_strip" android:layout_width="0dp" android:layout_height="@dimen/widget_strip_height"
+            android:layout_weight="1" android:scaleType="fitCenter" android:contentDescription="@string/buffer_zones"/>
         <TextView android:id="@+id/widget_risk" style="@style/WidgetMeta" android:layout_width="wrap_content"
-            android:layout_height="wrap_content" android:layout_marginStart="6dp" android:text="Буфер плана"/>
+            android:layout_height="wrap_content" android:layout_marginStart="6dp" />
     </LinearLayout>
     <TextView android:id="@+id/widget_next" style="@style/WidgetMeta" android:layout_width="match_parent"
         android:layout_height="wrap_content" android:visibility="gone"/>
     <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="1dp">
         <TextView android:id="@+id/widget_primary" style="@style/WidgetButton" android:layout_width="0dp"
-            android:layout_height="32dp" android:layout_weight="1.15" android:text="Добавить задачу"/>
+            android:layout_height="32dp" android:layout_weight="1.15" android:text="@string/add_task"/>
         <TextView android:id="@+id/widget_finish" style="@style/WidgetButton" android:layout_width="0dp"
             android:layout_height="32dp" android:layout_weight="1" android:layout_marginStart="5dp"
-            android:visibility="gone" android:text="Готово"/>
+            android:visibility="gone" android:text="@string/done"/>
         <TextView android:id="@+id/widget_skip" style="@style/WidgetButton" android:layout_width="0dp"
             android:layout_height="32dp" android:layout_weight="1.15" android:layout_marginStart="5dp"
-            android:visibility="gone" android:text="Пропустить"/>
+            android:visibility="gone" android:text="@string/skip"/>
     </LinearLayout>
 </LinearLayout>

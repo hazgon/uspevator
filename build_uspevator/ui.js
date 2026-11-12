@@ -3,10 +3,20 @@ const androidBridge = typeof window === 'undefined' ? null : window.UspevatorAnd
 const escapeHtml = value => String(value).replace(/[&<>"']/g, char =>
   ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'})[char]);
 const icon = name => `<svg class="icon" aria-hidden="true"><use href="#i-${name}"/></svg>`;
-const shortDate = new Intl.DateTimeFormat('ru-RU', {day: 'numeric', month: 'short'});
-const minutesLabel = new Intl.NumberFormat('ru-RU', {maximumFractionDigits: 4});
-const percentLabel = new Intl.NumberFormat('ru-RU', {maximumFractionDigits: 1});
+let shortDate, minutesLabel, percentLabel;
 const pad = value => String(value).padStart(2, '0');
+
+function selectedLanguage(choice) {
+  const system = androidBridge?.systemLanguage?.() ?? (typeof navigator === 'undefined' ? '' : navigator.language);
+  return resolveLanguage(choice, system);
+}
+
+function setFormats() {
+  shortDate = new Intl.DateTimeFormat(appLanguage, {day: 'numeric', month: 'short'});
+  minutesLabel = new Intl.NumberFormat(appLanguage, {maximumFractionDigits: 4});
+  percentLabel = new Intl.NumberFormat(appLanguage, {maximumFractionDigits: 1});
+}
+setFormats();
 
 function display(element, text) {
   if (element.textContent !== text) element.textContent = text;
@@ -19,17 +29,17 @@ function fieldError(element, message = '') {
 
 function duration(ms, precise = false) {
   const seconds = Math.floor(Math.abs(ms) / 1000);
-  if (seconds === 0 && ms !== 0) return '<1 с';
+  if (seconds === 0 && ms !== 0) return t('<1 с');
   const days = Math.floor(seconds / 86400);
   const hours = Math.floor(seconds / 3600) % 24;
   const minutes = Math.floor(seconds / 60) % 60;
   const rest = seconds % 60;
   const parts = [];
-  if (days) parts.push(`${days} д`);
-  if (hours) parts.push(`${hours} ч`);
-  if (minutes) parts.push(`${minutes} мин`);
-  if ((precise || !parts.length) && rest) parts.push(`${rest} с`);
-  return parts.join(' ') || '0 с';
+  if (days) parts.push(t`${days} д`);
+  if (hours) parts.push(t`${hours} ч`);
+  if (minutes) parts.push(t`${minutes} мин`);
+  if ((precise || !parts.length) && rest) parts.push(t`${rest} с`);
+  return parts.join(' ') || t('0 с');
 }
 
 function fmtClock(ms) {
@@ -56,7 +66,7 @@ function localDateValue(ts) {
 function readLocalDate(value, label) {
   if (!value) return null;
   const ts = new Date(value).getTime();
-  if (!isStamp(ts) || localDateValue(ts) !== value) throw new Error(`${label}. Проверьте дату и время.`);
+  if (!isStamp(ts) || localDateValue(ts) !== value) throw new Error(t`${label}. Проверьте дату и время.`);
   return ts;
 }
 
@@ -74,12 +84,12 @@ function fullTime(ts, now) {
 }
 
 function rangeLabel(task) {
-  return `${minutesLabel.format(task.minTime)}–${minutesLabel.format(task.maxTime)} мин`;
+  return t`${minutesLabel.format(task.minTime)}–${minutesLabel.format(task.maxTime)} мин`;
 }
 
 function percentage(value) {
   const rounded = Math.round(value * 10) / 10;
-  if (value !== 0 && rounded === 0) return value < 0 ? '−<0,1%' : '<0,1%';
+  if (value !== 0 && rounded === 0) return (value < 0 ? '−' : '') + '<' + percentLabel.format(0.1) + '%';
   return `${rounded < 0 ? '−' : ''}${percentLabel.format(Math.abs(rounded))}%`;
 }
 
@@ -97,18 +107,20 @@ function chartSetup() {
     <text x="${chartX(n)}" y="148" text-anchor="${n === 100 ? 'end' : 'middle'}">${n}</text>
   `).join('');
   return `
-    <text x="40" y="12" class="axis-label">Расход, %</text>
+    <text x="40" y="12" class="axis-label">${t('Расход запаса, %')}</text>
     ${polygon('green', [[0, 0], [100, 0], [100, 45], [0, 5]])}
     ${polygon('yellow', [[0, 5], [100, 45], [100, 95], [0, 55]])}
     ${polygon('red', [[0, 55], [100, 95], [100, 100], [0, 100]])}
     ${grid}
     <path class="axes" d="M${CHART.left},${CHART.top} V${CHART.bottom} H${CHART.right}"/>
     <path class="boundary" d="M${chartPoint(0, 5)} L${chartPoint(100, 45)} M${chartPoint(0, 55)} L${chartPoint(100, 95)}"/>
-    <text x="410" y="167" text-anchor="end" class="axis-label">Готовность, %</text>
-    <polyline id="chart-trend" class="trend" points=""/>
-    <g id="chart-history"></g>
-    <g id="chart-current" transform="translate(40 133)">
-      <circle class="live-halo" r="10"/><circle class="live-dot" r="5.6"/><title></title>
+    <text x="410" y="167" text-anchor="end" class="axis-label">${t('Готовность, %')}</text>
+    <g id="chart-data">
+      <polyline id="chart-trend" class="trend" points=""/>
+      <g id="chart-history"></g>
+      <g id="chart-current" transform="translate(40 133)">
+        <circle class="live-halo" r="10"/><circle class="live-dot" r="5.6"/><title></title>
+      </g>
     </g>`;
 }
 
@@ -120,10 +132,10 @@ const RISK_COPY = {
   neutral: ['Без резерва', 'У базовых оценок нет запаса. Расход показан в минутах.']
 };
 const PHASE_COPY = {
-  idle: ['Планирование', 'purple', 'Готовность к старту'],
-  running: ['В работе', 'green', 'Сейчас в фокусе'],
-  paused: ['На паузе', 'yellow', 'Таймер на паузе'],
-  done: ['Завершён', 'green', 'Итог дня']
+  idle: ['Планирование', 'purple'],
+  running: ['В работе', 'green'],
+  paused: ['На паузе', 'yellow'],
+  done: ['Завершён', 'green']
 };
 
 const DEMO = [
@@ -140,24 +152,32 @@ function rowButton(action, glyph, label, attrs = '', disabled = false) {
 function pendingRow(task, index, count) {
   const attrs = `data-id="${escapeHtml(task.id)}"`;
   return `<li class="task-row" data-drop-task="${escapeHtml(task.id)}">
-    ${rowButton('drag', 'grip', 'Порядок задачи. Перетащите или нажмите стрелку вверх или вниз', `${attrs} data-drag="task"`, count < 2)}
+    ${rowButton('drag', 'grip', t('Порядок задачи. Перетащите или нажмите стрелку вверх или вниз'), `${attrs} data-drag="task"`, count < 2)}
     <div class="task-text"><span class="task-title">${escapeHtml(task.name)}</span>
-      <span class="task-meta">(${rangeLabel(task)})${task.workedMs ? ` · уже потрачено ${escapeHtml(duration(task.workedMs, true))}` : ''}</span></div>
+      <span class="task-meta">(${rangeLabel(task)})${task.workedMs ? t` · уже потрачено ${escapeHtml(duration(task.workedMs, true))}` : ''}</span></div>
     <div class="task-actions">
-      ${rowButton('move-up', 'up', 'Выше в очереди', attrs, index === 0)}
-      ${rowButton('move-down', 'down', 'Ниже в очереди', attrs, index === count - 1)}
-      ${rowButton('edit', 'edit', 'Редактировать задачу', attrs)}
-      ${rowButton('delete', 'trash', 'Удалить задачу', attrs)}
+      ${rowButton('move-up', 'up', t('Выше в очереди'), attrs, index === 0)}
+      ${rowButton('move-down', 'down', t('Ниже в очереди'), attrs, index === count - 1)}
+      ${rowButton('edit', 'edit', t('Редактировать задачу'), attrs)}
+      ${rowButton('delete', 'trash', t('Удалить задачу'), attrs)}
     </div></li>`;
 }
 
 function historyRow(task) {
   const delta = task.workedMs - asMs(task.minTime);
-  const difference = task.excluded ? 'исключена из плана' : delta === 0 ? 'по базовой оценке'
-    : `${delta < 0 ? 'экономия' : 'сверх базы'} ${escapeHtml(duration(delta, true))}`;
+  const difference = task.excluded ? t('исключена из плана') : delta === 0 ? t('по базовой оценке')
+    : `${delta < 0 ? t('экономия') : t('сверх базы')} ${escapeHtml(duration(delta, true))}`;
   return `<li class="task-row"><span class="row-mark">${icon('check')}</span>
     <div class="task-text"><span class="task-title">${escapeHtml(task.name)}</span><span class="task-meta">(${rangeLabel(task)}) · ${difference}</span></div>
     <span class="fact-time">${escapeHtml(duration(task.workedMs, true))}</span></li>`;
+}
+
+function taskCount(count) {
+  if (appLanguage === 'en') return count + (count === 1 ? ' task' : ' tasks');
+  const last = count % 10;
+  const lastTwo = count % 100;
+  const noun = lastTwo >= 11 && lastTwo <= 14 ? 'задач' : last === 1 ? 'задача' : last >= 2 && last <= 4 ? 'задачи' : 'задач';
+  return count + ' ' + noun;
 }
 
 function formValues(form) {
@@ -207,11 +227,11 @@ class UIManager {
         optimisticMs: timing?.optimistic, guardedMs: timing?.guarded, reserveMs: timing?.reserve
       };
     }, error => {
-      log('WARN', 'SoundManager.unlock', 'Звук недоступен', error, this.store.getState().settings.logLevel);
-      this.toast('Браузер не включил звук. Таймер продолжает работать.');
+      log('WARN', 'SoundManager.unlock', t('Звук недоступен'), error, this.store.getState().settings.logLevel);
+      this.toast(t('Браузер не включил звук. Таймер продолжает работать.'));
     }, () => this.renderSound(this.store.getState().settings));
     this.drag = new DragManager(this);
-    $('chart').innerHTML = chartSetup();
+    this.translateShell = shellTranslations();
     this.bind();
     this.store.subscribe((next, previous, operation) => this.render(next, previous, operation));
     this.render(this.store.getState(), null, 'init');
@@ -234,7 +254,7 @@ class UIManager {
     const updated = scopeChange
       ? recordPoint({...next, timer: recordPoint(current, now).timer}, now) : next;
     if (!this.store.setState(updated, operation, now)) {
-      this.toast($('storage-warning').hidden ? 'План обновился. Повторите действие.' : 'Не удалось сохранить изменение.');
+      this.toast($('storage-warning').hidden ? t('План обновился. Повторите действие.') : t('Не удалось сохранить изменение.'));
       return false;
     }
     return true;
@@ -292,12 +312,12 @@ class UIManager {
       try {
         const values = formValues(event.currentTarget);
         const current = this.store.getState();
-        const start = current.timer.phase === 'idle' ? readLocalDate(values.start, 'Старт') : current.window.start;
-        const finish = readLocalDate(values.finish, 'Крайний срок');
-        if (start !== null && finish !== null && finish < start) throw new Error('Крайний срок должен быть после старта или совпадать с ним.');
+        const start = current.timer.phase === 'idle' ? readLocalDate(values.start, t('Старт')) : current.window.start;
+        const finish = readLocalDate(values.finish, t('Крайний срок'));
+        if (start !== null && finish !== null && finish < start) throw new Error(t('Крайний срок должен быть после старта или совпадать с ним.'));
         if (this.commit('UIManager.saveWindow', state => ({...state, window: {start, finish}}))) {
           $('window-details').open = false;
-          this.toast('Окно дня сохранено.');
+          this.toast(t('Окно дня сохранено.'));
         }
       } catch (error) { this.report('UIManager.saveWindow', error, $('window-error')); }
     });
@@ -316,6 +336,14 @@ class UIManager {
       const level = event.currentTarget.value;
       this.commit('UIManager.logLevel', state => ({...state, settings: {...state.settings, logLevel: level}}));
     });
+    $('language-choice').addEventListener('change', event => {
+      const language = normalizeLanguage(event.currentTarget.value);
+      if (!this.commit('UIManager.language', state => state.settings.language === language ? state
+        : {...state, settings: {...state.settings, language}})) {
+        event.currentTarget.value = this.store.getState().settings.language;
+      }
+    });
+    window.addEventListener('languagechange', () => this.refreshLanguage());
     $('import-file').addEventListener('change', event => {
       const file = event.currentTarget.files?.[0];
       event.currentTarget.value = '';
@@ -337,7 +365,7 @@ class UIManager {
     else this.toast(error.message);
   }
 
-  openDialog({title, body, confirm = 'Сохранить', danger = false, action}) {
+  openDialog({title, body, confirm = t('Сохранить'), danger = false, action}) {
     display($('dialog-title'), title);
     $('dialog-body').innerHTML = body;
     const button = $('dialog-confirm');
@@ -382,9 +410,8 @@ class UIManager {
         $('queue-details').open = true;
         this.reveal($('queue-disclosure'));
         break;
-      case 'plan-details':
-        $('plan-details').open = true;
-        $('plan-disclosure').focus();
+      case 'show-buffer':
+        this.reveal($('buffer-heading'));
         break;
       case 'task-actions':
         this.openTaskActions(state);
@@ -424,7 +451,7 @@ class UIManager {
       }
       case 'sound-test':
         void this.sound.unlock(true).then(ready => {
-          if (ready) this.toast('Тестовый двойной сигнал.');
+          if (ready) this.toast(t('Тестовый двойной сигнал.'));
         });
         break;
       case 'start':
@@ -448,38 +475,38 @@ class UIManager {
         if (androidBridge) {
           if (androidBridge.undoFinish(this.store.raw || '')) {
             this.store.acceptStorage(androidBridge.readPlan() || null);
-            this.toast('Завершение отменено.');
+            this.toast(t('Завершение отменено.'));
           } else this.renderUndo();
         } else if (this.canUndo() && this.commit('Timer.undoFinish', () => this.undo.previous)) {
           this.undo = null;
           this.renderUndo();
-          this.toast('Завершение отменено.');
+          this.toast(t('Завершение отменено.'));
         }
         break;
       case 'skip':
         if (this.commit('Timer.skipTask', (current, now) => Timer.skipTask(current, now))) {
           if (this.dialog.open) this.dialog.close();
-          this.toast('Задача перенесена в конец очереди.');
+          this.toast(t('Задача перенесена в конец очереди.'));
         }
         break;
       case 'exclude': {
         const active = activeTask(state);
-        if (active) this.confirm('Исключить задачу из плана?',
-          '«' + active.name + '» будет отмечена как исключённая. Прогноз учтёт оставшиеся задачи.',
-          'Исключить', () => this.commit('Timer.excludeTask', (current, now) =>
+        if (active) this.confirm(t('Исключить задачу из плана?'),
+          t`«${active.name}» будет отмечена как исключённая. Прогноз учтёт оставшиеся задачи.`,
+          t('Исключить'), () => this.commit('Timer.excludeTask', (current, now) =>
             current.timer.activeId === active.id ? Timer.excludeTask(current, now) : current), true);
         break;
       }
       case 'repeat':
         if (this.commit('Timer.repeatPlan', current => Timer.repeatPlan(current))) {
           window.scrollTo(0, 0);
-          this.toast('Список готов к новому запуску.');
+          this.toast(t('Список готов к новому запуску.'));
         }
         break;
       case 'reset': {
-        this.confirm('Сбросить выполнение?',
-          'Задачи вернутся в очередь. Таймер, история выполнения и график начнутся с нуля.',
-          'Сбросить',
+        this.confirm(t('Сбросить выполнение?'),
+          t('Задачи вернутся в очередь. Таймер, история выполнения и график начнутся с нуля.'),
+          t('Сбросить'),
           () => this.commit('Timer.resetTimer', current => Timer.resetTimer(current)), true);
         break;
       }
@@ -496,7 +523,7 @@ class UIManager {
         if (task) this.editTask(task);
         break;
       case 'delete':
-        if (task) this.confirm('Удалить задачу?', `«${task.name}» исчезнет из плана дня.`, 'Удалить',
+        if (task) this.confirm(t('Удалить задачу?'), t`«${task.name}» исчезнет из плана дня.`, t('Удалить'),
           () => this.commit('TaskManager.deleteTask', current => TaskManager.deleteTask(current, id), true), true);
         break;
       case 'move-up':
@@ -505,9 +532,9 @@ class UIManager {
         break;
       case 'demo':
         if (!state.tasks.length) {
-          const tasks = DEMO.map(item => makeTask(item, uid()));
+          const tasks = DEMO.map(item => makeTask({...item, name: t(item.name), firstStep: t(item.firstStep)}, uid()));
           this.commit('TaskManager.loadDemo', current => ({...current, tasks, timer: emptyTimer()}));
-          this.toast('Пример загружен. Можно менять задачи и запускать таймер.');
+          this.toast(t('Пример загружен. Можно менять задачи и запускать таймер.'));
         }
         break;
       case 'clear-window':
@@ -525,7 +552,7 @@ class UIManager {
         if (template) this.applyTemplate(template);
         break;
       case 'delete-template':
-        if (template) this.confirm('Удалить шаблон?', `«${template.name}» исчезнет из набора шаблонов.`, 'Удалить',
+        if (template) this.confirm(t('Удалить шаблон?'), t`«${template.name}» исчезнет из набора шаблонов.`, t('Удалить'),
           () => this.commit('TemplateManager.deleteTemplate', current => TemplateManager.deleteTemplate(current, id)), true);
         break;
       case 'copy-template-task':
@@ -544,7 +571,7 @@ class UIManager {
         break;
       case 'tests': {
         const result = runSelfTests();
-        display($('test-result'), `Пройдено ${result.passed} из ${result.total}. Подробности в консоли.`);
+        display($('test-result'), t`Пройдено ${result.passed} из ${result.total}. Подробности в консоли.`);
         break;
       }
     }
@@ -565,15 +592,16 @@ class UIManager {
     const task = activeTask(state);
     if (!task) return;
     const canDefer = state.tasks.some(task => !task.done && task.id !== state.timer.activeId);
-    const description = '<div class="task-menu-info"><p><strong>' + escapeHtml(task.name) + '</strong></p>'
-      + (task.firstStep ? '<p class="dialog-copy"><b>Первый шаг</b> · ' + escapeHtml(task.firstStep) + '</p>' : '') + '</div>';
+    const description = `<div class="task-menu-info"><p><strong>${escapeHtml(task.name)}</strong></p>
+      ${task.firstStep ? `<p class="dialog-copy"><b>${t('Первый шаг')}</b> · ${escapeHtml(task.firstStep)}</p>` : ''}</div>`;
     this.openDialog({
-      title: 'Действия с задачей',
-      body: description + '<div class="task-menu-actions">'
-        + '<button type="button" class="btn btn-soft" data-action="remaining">Уточнить остаток</button>'
-        + '<button type="button" class="btn btn-quiet" data-action="skip" ' + (canDefer ? '' : 'disabled') + '>В конец очереди</button>'
-        + '<button type="button" class="btn btn-quiet" data-action="exclude">Исключить из плана</button>'
-        + '<button type="button" class="btn btn-quiet" data-action="reset">Сбросить весь план</button></div>'
+      title: t('Действия с задачей'),
+      body: description + `<div class="task-menu-actions">
+        <button type="button" class="btn btn-soft" data-action="remaining">${t('Уточнить остаток')}</button>
+        <button type="button" class="btn btn-quiet" data-action="skip" ${canDefer ? '' : 'disabled'}>${t('В конец очереди')}</button>
+        <button type="button" class="btn btn-quiet" data-action="exclude">${t('Исключить из плана')}</button>
+        <button type="button" class="btn btn-quiet" data-action="reset">${t('Сбросить весь план')}</button>
+      </div>`
     });
   }
 
@@ -583,11 +611,11 @@ class UIManager {
       const finished = fullTime(run.finishedAt, wallTime());
       const count = run.tasks.filter(task => !task.excluded).length;
       return '<details class="run-entry"><summary><strong>' + escapeHtml(finished) + '</strong>'
-        + '<span>' + count + ' из ' + run.tasks.length + ' задач</span>' + icon('chev') + '</summary>'
-        + '<p class="subtext">Обещано к ' + escapeHtml(fullTime(run.protectedFinish, wallTime())) + '</p>'
+        + '<span>' + t`${count} из ${run.tasks.length} задач` + '</span>' + icon('chev') + '</summary>'
+        + '<p class="subtext">' + escapeHtml(t`Обещано к ${fullTime(run.protectedFinish, wallTime())}`) + '</p>'
         + '<ul>' + run.tasks.map(task => '<li>' + escapeHtml(task.name) + ' · '
-          + (task.excluded ? 'исключена' : duration(task.workedMs, true)) + '</li>').join('') + '</ul></details>';
-    }).join('') : '<p class="subtext">Здесь появятся результаты завершённых планов.</p>';
+          + (task.excluded ? t('исключена') : duration(task.workedMs, true)) + '</li>').join('') + '</ul></details>';
+    }).join('') : `<p class="subtext">${t('Здесь появятся результаты завершённых планов.')}</p>`;
     $('runs-dialog').showModal();
   }
 
@@ -595,11 +623,11 @@ class UIManager {
     const view = metrics(state, wallTime());
     const value = Math.ceil(view.activeLeft / 600) / 100;
     this.openDialog({
-      title: 'Уточнить остаток',
-      body: `<div class="dialog-fields"><p class="dialog-copy">Оцените, сколько минут ещё нужно для текущей задачи. Это обновит прогноз и положение на графике.</p>
-      <label class="field"><span>Осталось, мин</span><input name="remaining" inputmode="decimal" value="${value}" required></label></div>`,
+      title: t('Уточнить остаток'),
+      body: `<div class="dialog-fields"><p class="dialog-copy">${t('Оцените, сколько минут ещё нужно для текущей задачи. Это обновит прогноз и положение на графике.')}</p>
+      <label class="field"><span>${t('Осталось, мин')}</span><input name="remaining" inputmode="decimal" value="${value}" required></label></div>`,
       action: values => {
-        const remainingMs = asMs(estimate(values.remaining, 'Остаток', true));
+        const remainingMs = asMs(estimate(values.remaining, t('Остаток'), true));
         return this.commit('Timer.setRemaining', (current, now) => Timer.setRemaining(current, now, remainingMs));
       }
     });
@@ -609,11 +637,11 @@ class UIManager {
     const field = (name, label, value, mode = '') => `<label class="field"><span>${label}</span>
       <input name="${name}" value="${escapeHtml(value)}" ${mode ? `inputmode="${mode}"` : ''} autocomplete="off"></label>`;
     this.openDialog({
-      title: 'Редактировать задачу',
+      title: t('Редактировать задачу'),
       body: `<div class="dialog-fields">
-        ${field('name', 'Название', task.name)}
-        <div class="estimate-pair">${field('minTime', 'Оптимистично, мин', task.minTime, 'decimal')}${field('maxTime', 'С запасом, мин', task.maxTime, 'decimal')}</div>
-        ${field('firstStep', 'Первый шаг', task.firstStep)}
+        ${field('name', t('Название'), task.name)}
+        <div class="estimate-pair">${field('minTime', t('Оптимистично, мин'), task.minTime, 'decimal')}${field('maxTime', t('С запасом, мин'), task.maxTime, 'decimal')}</div>
+        ${field('firstStep', t('Первый шаг'), task.firstStep)}
       </div>`,
       action: values => {
         const fields = taskFields(values, true);
@@ -633,12 +661,12 @@ class UIManager {
       return;
     }
     this.openDialog({
-      title: 'Новый список',
+      title: t('Новый список'),
       body: `<div class="dialog-fields">
-        <p class="dialog-copy">Текущий список будет заменён. Результаты завершённого плана доступны в истории планов. Задачи можно сохранить как шаблон.</p>
-        <div><button class="btn btn-soft" type="button" data-action="save-and-new">${icon('layers')}Сохранить как шаблон и начать новый</button></div>
+        <p class="dialog-copy">${t('Текущий список будет заменён. Результаты завершённого плана доступны в истории планов. Задачи можно сохранить как шаблон.')}</p>
+        <div><button class="btn btn-soft" type="button" data-action="save-and-new">${icon('layers')}${t('Сохранить как шаблон и начать новый')}</button></div>
       </div>`,
-      confirm: 'Создать пустой список',
+      confirm: t('Создать пустой список'),
       action: create
     });
   }
@@ -664,17 +692,13 @@ class UIManager {
     const available = state.templates.filter(template => template.tasks.length > 0);
     const hasChoices = available.length > 0;
     display($('template-picker-description'), hasChoices
-      ? 'Выберите набор для списка задач. Таймер запускается кнопкой «Начать».'
-      : 'Шаблонов с задачами пока нет. Импортируйте JSON или соберите список и сохраните его как шаблон.');
+      ? t('Выберите набор для списка задач. Таймер запускается кнопкой «Начать».')
+      : t('Шаблонов с задачами пока нет. Импортируйте JSON или соберите список и сохраните его как шаблон.'));
     choices.hidden = !hasChoices;
     choices.innerHTML = available.map(template => {
-      const count = template.tasks.length;
-      const last = count % 10;
-      const lastTwo = count % 100;
-      const ending = lastTwo >= 11 && lastTwo <= 14 ? 'задач' : last === 1 ? 'задача' : last >= 2 && last <= 4 ? 'задачи' : 'задач';
       return '<li><button class="btn btn-soft template-choice" type="button" data-action="apply-template" data-id="'
         + escapeHtml(template.id) + '"><span><strong>' + escapeHtml(template.name) + '</strong><small>'
-        + count + ' ' + ending + '</small></span>' + icon('arrow') + '</button></li>';
+        + taskCount(template.tasks.length) + '</small></span>' + icon('arrow') + '</button></li>';
     }).join('');
     $('picker-add').hidden = hasChoices || state.tasks.length > 0 || state.timer.phase !== 'idle';
     $('picker-manage').hidden = state.templates.length === 0;
@@ -699,20 +723,20 @@ class UIManager {
   focusNewPlan() {
     this.resetPlanForm();
     requestAnimationFrame(() => $('task-name').focus());
-    this.toast('Новый список готов. Добавьте задачи.');
+    this.toast(t('Новый список готов. Добавьте задачи.'));
   }
 
   editTemplate(template = null, andNewPlan = false) {
     this.openDialog({
-      title: template ? 'Перезаписать шаблон' : 'Сохранить план как шаблон',
-      body: `<div class="dialog-fields"><p class="dialog-copy">В шаблон попадут задачи текущего плана в их порядке, оценки и первые шаги.</p>
-        <label class="field"><span>Название шаблона</span><input name="name" value="${escapeHtml(template?.name || '')}" placeholder="Например, утренний блок" autocomplete="off" required></label></div>`,
-      confirm: andNewPlan ? 'Сохранить и создать новый' : template ? 'Перезаписать' : 'Сохранить',
+      title: template ? t('Перезаписать шаблон') : t('Сохранить план как шаблон'),
+      body: `<div class="dialog-fields"><p class="dialog-copy">${t('В шаблон попадут задачи текущего плана в их порядке, оценки и первые шаги.')}</p>
+        <label class="field"><span>${t('Название шаблона')}</span><input name="name" value="${escapeHtml(template?.name || '')}" placeholder="${escapeHtml(t('Например, утренний блок'))}" autocomplete="off" required></label></div>`,
+      confirm: andNewPlan ? t('Сохранить и создать новый') : template ? t('Перезаписать') : t('Сохранить'),
       action: values => {
         const name = templateName(values.name);
         const state = this.store.getState();
         if (state.templates.some(item => item.id !== template?.id && item.name.toLocaleLowerCase('ru') === name.toLocaleLowerCase('ru'))) {
-          throw new Error('Шаблон с таким названием уже есть. Его можно перезаписать из списка шаблонов.');
+          throw new Error(t('Шаблон с таким названием уже есть. Его можно перезаписать из списка шаблонов.'));
         }
         const id = template?.id ?? uid();
         if (!this.commit('TemplateManager.saveTemplate', current => {
@@ -722,7 +746,7 @@ class UIManager {
         if (andNewPlan) this.focusNewPlan();
         else {
           this.showTemplates(id);
-          this.toast('Шаблон сохранён.');
+          this.toast(t('Шаблон сохранён.'));
         }
         return true;
       }
@@ -736,7 +760,7 @@ class UIManager {
       const ids = template.tasks.map(() => uid());
       if (!this.commit('TemplateManager.applyTemplate', state => TemplateManager.applyTemplate(state, template.id, ids))) return false;
       if (picker.open) picker.close();
-      this.toast('Шаблон применён к плану дня.');
+      this.toast(t('Шаблон применён к плану дня.'));
       this.resetPlanForm();
       requestAnimationFrame(() => {
         $('primary-action').focus({preventScroll: true});
@@ -746,7 +770,7 @@ class UIManager {
     };
     if (this.store.getState().tasks.length) {
       if (picker.open) picker.close();
-      this.confirm('Заменить план дня?', `Шаблон «${template.name}» заменит задачи и сбросит выполнение текущего плана.`, 'Применить', apply);
+      this.confirm(t('Заменить план дня?'), t`Шаблон «${template.name}» заменит задачи и сбросит выполнение текущего плана.`, t('Применить'), apply);
     } else apply();
   }
 
@@ -770,7 +794,7 @@ class UIManager {
     if (!task) return;
     const newId = uid();
     if (this.commit('TaskManager.copyTemplateTask', current => TaskManager.createTask(current, task, newId, beforeId), true)) {
-      this.toast('Задача скопирована в план дня.');
+      this.toast(t('Задача скопирована в план дня.'));
     }
   }
 
@@ -779,22 +803,22 @@ class UIManager {
     try {
       const imported = parseImport(await file.text());
       if (imported.kind === 'templates') {
-        this.confirm('Импортировать шаблоны?', `В файле ${imported.templates.length} шт. Набор шаблонов будет заменён, а текущий план сохранится.`,
-          'Импортировать', () => {
+        this.confirm(t('Импортировать шаблоны?'), t`В файле ${imported.templates.length} шт. Набор шаблонов будет заменён, а текущий план сохранится.`,
+          t('Импортировать'), () => {
             if (!this.commit('ImportExportManager.importTemplates', state => ({...state, templates: imported.templates}))) return false;
             if (picker.open) requestAnimationFrame(() => {
               if (picker.open) this.openTemplatePicker(this.store.getState());
             });
             else this.showTemplates();
-            this.toast('Шаблоны импортированы.');
+            this.toast(t('Шаблоны импортированы.'));
             return true;
           });
       } else {
-        this.confirm('Восстановить резервную копию?', 'План, история, шаблоны и настройки будут заменены данными из файла.',
-          'Восстановить', () => {
+        this.confirm(t('Восстановить резервную копию?'), t('План, история, шаблоны и настройки будут заменены данными из файла.'),
+          t('Восстановить'), () => {
             if (!this.commit('ImportExportManager.importBackup', () => imported.state)) return false;
             if (picker.open) picker.close();
-            this.toast('Резервная копия восстановлена.');
+            this.toast(t('Резервная копия восстановлена.'));
             return true;
           });
       }
@@ -803,17 +827,34 @@ class UIManager {
     }
   }
 
+  refreshLanguage() {
+    const state = this.store.getState();
+    if (selectedLanguage(state.settings.language) !== appLanguage) this.render(state, state, 'languagechange');
+  }
+
   render(state, previous, operation) {
+    const language = selectedLanguage(state.settings.language);
+    const languageChanged = !previous || language !== appLanguage;
+    if (languageChanged) {
+      appLanguage = language;
+      setFormats();
+      this.translateShell();
+      $('chart').innerHTML = chartSetup();
+      this.lastPoints = null;
+      for (const id of ['add-error', 'window-error', 'dialog-error', 'template-picker-error']) fieldError($(id));
+      $('toast').hidden = true;
+    }
     if (operation === 'external') {
       this.drag.cancel();
       if (this.dialog.open) this.dialog.close();
       if ($('template-picker').open) $('template-picker').close();
-      this.toast(androidBridge ? 'План обновлён с виджета.' : 'План обновлён из другой вкладки.');
+      this.toast(androidBridge ? t('План обновлён с виджета.') : t('План обновлён из другой вкладки.'));
     }
     const phaseChanged = state.timer.phase !== previous?.timer.phase;
     const activeChanged = state.timer.activeId !== previous?.timer.activeId;
-    if (state.tasks !== previous?.tasks || activeChanged || phaseChanged) this.renderTasks(state);
-    if (state.templates !== previous?.templates || phaseChanged || Boolean(state.tasks.length) !== Boolean(previous?.tasks.length)) {
+    if (languageChanged || state.tasks !== previous?.tasks || activeChanged || phaseChanged) this.renderTasks(state);
+    if (languageChanged || state.templates !== previous?.templates || phaseChanged
+        || Boolean(state.tasks.length) !== Boolean(previous?.tasks.length)) {
       this.renderTemplates(state);
     }
     if (state.window !== previous?.window || phaseChanged) {
@@ -822,9 +863,10 @@ class UIManager {
       $('planned-start').disabled = state.timer.phase !== 'idle';
       fieldError($('window-error'));
     }
-    if (state.settings !== previous?.settings) {
+    if (languageChanged || state.settings !== previous?.settings) {
       this.renderSound(state.settings);
       $('log-level').value = state.settings.logLevel;
+      $('language-choice').value = state.settings.language;
     }
     if (phaseChanged && (state.timer.phase === 'idle' || state.timer.phase === 'done')) $('queue-details').open = true;
     if ((operation === 'init' || previous?.timer.phase === 'idle')
@@ -843,7 +885,7 @@ class UIManager {
     const needsActivation = settings.sound && !ready;
     sound.setAttribute('aria-pressed', String(ready));
     sound.dataset.activate = String(needsActivation);
-    sound.title = ready ? 'Выключить звук' : needsActivation ? 'Активировать звук в этой вкладке' : 'Включить звук';
+    sound.title = ready ? t('Выключить звук') : needsActivation ? t('Активировать звук в этой вкладке') : t('Включить звук');
     const label = sound.title;
     sound.setAttribute('aria-label', label);
     sound.innerHTML = icon(ready ? 'sound' : 'muted');
@@ -856,20 +898,20 @@ class UIManager {
     const task = activeTask(state);
     const hasTasks = state.tasks.length > 0;
     $('phase-label').dataset.tone = tone;
-    display($('phase-label').lastElementChild, label);
+    display($('phase-label').lastElementChild, t(label));
     const completed = state.tasks.filter(item => item.done && !item.excluded).length;
     const included = state.tasks.filter(item => !item.excluded).length;
-    display($('focus-kicker'), isActive ? 'Задача ' + (completed + 1) + ' из ' + included : 'План дня');
-    display($('focus-heading'), task?.name || (phase === 'done' ? 'План завершён'
-      : hasTasks ? 'Готово к старту' : 'С чего начнём?'));
+    display($('focus-kicker'), isActive ? t`Задача ${completed + 1} из ${included}` : t('План дня'));
+    display($('focus-heading'), task?.name || (phase === 'done' ? t('План завершён')
+      : hasTasks ? t('Готово к старту') : t('С чего начнём?')));
     const step = $('first-step');
     step.hidden = !task?.firstStep;
-    step.innerHTML = task?.firstStep ? '<b>Первый шаг</b> · ' + escapeHtml(task.firstStep) : '';
+    step.innerHTML = task?.firstStep ? `<b>${t('Первый шаг')}</b> · ${escapeHtml(task.firstStep)}` : '';
     const primary = $('primary-action');
     const choice = {
-      idle: hasTasks ? ['start', 'play', 'Начать'] : ['go-add', 'plus', 'Добавить задачу'],
-      running: ['pause', 'pause', 'Пауза'], paused: ['start', 'play', 'Продолжить'],
-      done: ['new-plan', 'plus', 'Новый список']
+      idle: hasTasks ? ['start', 'play', t('Начать')] : ['go-add', 'plus', t('Добавить задачу')],
+      running: ['pause', 'pause', t('Пауза')], paused: ['start', 'play', t('Продолжить')],
+      done: ['new-plan', 'plus', t('Новый список')]
     }[phase];
     primary.dataset.action = choice[0];
     primary.className = 'btn ' + (phase === 'running' ? 'focus-secondary' : 'focus-primary');
@@ -904,19 +946,19 @@ class UIManager {
     }
     $('active-row').innerHTML = active ? `<div class="current-row">
       <span class="row-mark">${icon('bolt')}</span><div class="task-text"><span class="task-title">${escapeHtml(active.name)}</span>
-      <span class="task-meta">(${rangeLabel(active)}) · ${state.timer.phase === 'paused' ? 'на паузе' : 'в работе'}</span></div>
-      <span class="pill" data-tone="purple">Текущая</span></div>` : '';
+      <span class="task-meta">(${rangeLabel(active)}) · ${state.timer.phase === 'paused' ? t('на паузе') : t('в работе')}</span></div>
+      <span class="pill" data-tone="purple">${t('Текущая')}</span></div>` : '';
     $('queue-empty').hidden = state.tasks.length > 0;
     $('save-template').disabled = !state.tasks.length;
     $('history').hidden = !done.length;
     $('history-list').innerHTML = done.map(historyRow).join('');
-    display($('history-summary'), `Всего ${duration(done.reduce((sum, task) => sum + task.workedMs, 0), true)}`);
+    display($('history-summary'), t`Всего ${duration(done.reduce((sum, task) => sum + task.workedMs, 0), true)}`);
     display($('queue-summary'), state.tasks.length
-      ? `В очереди ${pending.length} · выполнено ${done.length}` : 'Последовательно, по одной за раз');
-    if (active) display($('queue-summary'), pending.length ? 'Далее · ' + pending[0].name : 'Последняя задача');
+      ? t`В очереди ${pending.length} · выполнено ${done.length}` : t('Последовательно, по одной за раз'));
+    if (active) display($('queue-summary'), pending.length ? t`Далее · ${pending[0].name}` : t('Последняя задача'));
     else if (state.timer.phase === 'done') {
       const excluded = done.filter(task => task.excluded).length;
-      display($('queue-summary'), 'Выполнено ' + (done.length - excluded) + (excluded ? ' · исключено ' + excluded : ''));
+      display($('queue-summary'), t`Выполнено ${done.length - excluded}` + (excluded ? t` · исключено ${excluded}` : ''));
     }
   }
 
@@ -931,20 +973,20 @@ class UIManager {
       const tasks = template.tasks.map((task, i) => {
         const attrs = `data-id="${id}" data-index="${i}"`;
         return `<li class="template-task">
-          ${rowButton('drag', 'grip', 'Перетащить задачу в план дня', `${attrs} data-drag="template"`, locked)}
+          ${rowButton('drag', 'grip', t('Перетащить задачу в план дня'), `${attrs} data-drag="template"`, locked)}
           <div class="task-text"><span class="task-title">${escapeHtml(task.name)}</span><span class="task-meta">(${rangeLabel(task)})</span></div>
-          ${rowButton('copy-template-task', 'plus', 'Добавить задачу из шаблона', attrs, locked)}
+          ${rowButton('copy-template-task', 'plus', t('Добавить задачу из шаблона'), attrs, locked)}
         </li>`;
       }).join('');
       return `<details class="template-item" data-template="${id}" ${open.has(template.id) ? 'open' : ''}>
-        <summary><span class="template-name">${escapeHtml(template.name)}</span><span class="template-meta">${template.tasks.length} шт.</span>${icon('chev').replace('class="icon"', 'class="icon chevron"')}</summary>
+        <summary><span class="template-name">${escapeHtml(template.name)}</span><span class="template-meta">${taskCount(template.tasks.length)}</span>${icon('chev').replace('class="icon"', 'class="icon chevron"')}</summary>
         <div class="template-body">
           <div class="row-buttons template-actions">
-            <button class="btn btn-soft" type="button" data-action="apply-template" data-id="${id}" ${tasks ? '' : 'disabled'}>Применить</button>
-            <button class="btn btn-quiet" type="button" data-action="overwrite-template" title="Сохранить текущий список в этот шаблон" data-id="${id}" ${state.tasks.length ? '' : 'disabled'}>Перезаписать</button>
-            ${rowButton('delete-template', 'trash', 'Удалить шаблон', `data-id="${id}"`)}
+            <button class="btn btn-soft" type="button" data-action="apply-template" data-id="${id}" ${tasks ? '' : 'disabled'}>${t('Применить')}</button>
+            <button class="btn btn-quiet" type="button" data-action="overwrite-template" title="${escapeHtml(t('Сохранить текущий список в этот шаблон'))}" data-id="${id}" ${state.tasks.length ? '' : 'disabled'}>${t('Перезаписать')}</button>
+            ${rowButton('delete-template', 'trash', t('Удалить шаблон'), `data-id="${id}"`)}
           </div>
-          ${tasks ? `<ul class="template-tasks">${tasks}</ul>` : '<p class="subtext">В шаблоне нет задач.</p>'}
+          ${tasks ? `<ul class="template-tasks">${tasks}</ul>` : `<p class="subtext">${t('В шаблоне нет задач.')}</p>`}
         </div></details>`;
     }).join('');
   }
@@ -955,13 +997,11 @@ class UIManager {
     const view = metrics(state, now);
     this.renderFocus(state, view, now);
     this.renderUndo();
-    if ($('plan-details').open) {
-      this.renderBuffer(state, view);
-      this.renderForecast(state, view, now);
-    }
+    this.renderBuffer(state, view);
+    if ($('plan-details').open) this.renderForecast(state, view, now);
     this.sound.sync();
     if (state.settings.logLevel === 'DEBUG' && state.timer.phase === 'running') {
-      log('DEBUG', 'Timer.tick', 'Таймер обновлён', {
+      log('DEBUG', 'Timer.tick', t('Таймер обновлён'), {
         elapsedMs: view.activeElapsed, taskBaseLeftMs: view.timing?.optimistic,
         taskSafeLeftMs: view.timing?.guarded, planBufferLeftMs: view.remainingMs
       }, 'DEBUG');
@@ -977,8 +1017,8 @@ class UIManager {
     $('focus-fact').hidden = draft;
     if (timing) {
       for (const [key, value, label] of [
-        ['base', timing.optimistic, timing.optimistic < 0 ? 'Сверх оптимистичной' : 'Оптимистично'],
-        ['safe', timing.guarded, timing.guarded < 0 ? 'Сверх верхней оценки' : 'С запасом']
+        ['base', timing.optimistic, timing.optimistic < 0 ? t('Сверх оптимистичной') : t('Оптимистично')],
+        ['safe', timing.guarded, timing.guarded < 0 ? t('Сверх верхней оценки') : t('С запасом')]
       ]) {
         const countdown = $(key + '-countdown');
         const valueText = fmtCountdown(value);
@@ -988,10 +1028,10 @@ class UIManager {
         display($(key + '-clock'), valueText);
       }
     }
-    display($('fact-label'), done ? 'Время плана' : 'Работа');
+    display($('fact-label'), done ? t('Время плана') : t('Работа'));
     display($('task-clock'), fmtCountdown(done ? finishedAt - startedAt : view.activeElapsed));
     if (phase === 'paused') {
-      display($('phase-label').lastElementChild, view.pauseMs === null ? 'На паузе' : 'Пауза ' + fmtCountdown(view.pauseMs));
+      display($('phase-label').lastElementChild, view.pauseMs === null ? t('На паузе') : t`Пауза ${fmtCountdown(view.pauseMs)}`);
     }
 
     const scheduled = draft && state.window.start !== null;
@@ -999,25 +1039,25 @@ class UIManager {
     const showForecast = view.hasPlan && (!draft || (scheduled && current !== view.protectedFinish));
     const delta = (done ? finishedAt : view.guarded) - view.protectedFinish;
     $('focus-commitment').hidden = !view.hasPlan;
-    display($('focus-promise-label'), draft ? (scheduled ? 'Финиш по плану' : 'Финиш с запасом') : 'Обещано к');
+    display($('focus-promise-label'), draft ? (scheduled ? t('Финиш по плану') : t('Финиш с запасом')) : t('Обещано к'));
     display($('focus-promise-time'), fullTime(view.protectedFinish, now));
     $('focus-forecast').hidden = !showForecast;
     $('focus-forecast').dataset.warn = String(!done && (view.estimateExhausted || (!draft && delta >= 60_000)));
-    display($('focus-forecast-label'), done ? 'Завершено в' : draft ? 'Если начать сейчас'
-      : phase === 'paused' ? 'Если продолжить сейчас' : 'Прогноз с запасом');
-    display($('focus-forecast-time'), view.estimateExhausted ? 'Нужна оценка' : fullTime(current, now));
+    display($('focus-forecast-label'), done ? t('Завершено в') : draft ? t('Если начать сейчас')
+      : phase === 'paused' ? t('Если продолжить сейчас') : t('Прогноз с запасом'));
+    display($('focus-forecast-time'), view.estimateExhausted ? t('Нужна оценка') : fullTime(current, now));
     $('remaining-btn').hidden = !view.estimateExhausted;
-    const risk = RISK_COPY[view.risk][0];
+    const risk = t(RISK_COPY[view.risk][0]);
     $('risk-strip-marker').style.left = String(view.riskPosition) + '%';
-    display($('risk-strip-label'), 'Буфер плана · ' + risk);
-    $('focus-reserve').setAttribute('aria-label', 'Буфер плана · ' + risk + '. Открыть подробности');
+    display($('risk-strip-label'), t`Буфер плана · ${risk}`);
+    $('focus-reserve').setAttribute('aria-label', t`Буфер плана · ${risk}. Открыть график запаса времени`);
     let hint = '';
-    if (done) hint = delta === 0 ? 'Завершено ровно к обещанному времени.'
-      : (delta < 0 ? 'Раньше обещанного на ' : 'Позже обещанного на ') + duration(delta, true) + '.';
+    if (done) hint = delta === 0 ? t('Завершено ровно к обещанному времени.')
+      : delta < 0 ? t`Раньше обещанного на ${duration(delta, true)}.` : t`Позже обещанного на ${duration(delta, true)}.`;
     else if (draft && scheduled) hint = now > state.window.start + 1000
-      ? 'Задержка старта · ' + duration(now - state.window.start, true)
-      : 'Плановый старт · ' + fullTime(state.window.start, now);
-    else if (!draft && !view.estimateExhausted && delta >= 60_000) hint = 'Прогноз позже обещанного на ' + duration(delta) + '.';
+      ? t`Задержка старта · ${duration(now - state.window.start, true)}`
+      : t`Плановый старт · ${fullTime(state.window.start, now)}`;
+    else if (!draft && !view.estimateExhausted && delta >= 60_000) hint = t`Прогноз позже обещанного на ${duration(delta)}.`;
     $('focus-hint').hidden = !hint;
     $('focus-hint').dataset.warn = String((!draft && delta >= 60_000) || (draft && scheduled && now > state.window.start + 1000));
     display($('focus-hint'), hint);
@@ -1028,10 +1068,10 @@ class UIManager {
     const [label, message] = RISK_COPY[risk];
     const badge = $('risk-badge');
     badge.dataset.tone = risk;
-    display(badge.lastElementChild, view.hasPlan ? label : 'Ожидание');
-    display($('reserve-label'), view.remainingMs < 0 ? 'Перерасход резерва' : 'Резерв времени');
+    display(badge.lastElementChild, t(view.hasPlan ? label : 'Ожидание'));
+    display($('reserve-label'), view.remainingMs < 0 ? t('Перерасход резерва') : t('Резерв времени'));
     display($('reserve-value'), view.hasPlan ? duration(view.remainingMs, true) : '—');
-    $('reserve-value').title = view.hasPlan ? `Исходный резерв ${duration(view.bufferMs, true)}` : '';
+    $('reserve-value').title = view.hasPlan ? t`Исходный резерв ${duration(view.bufferMs, true)}` : '';
     display($('burn-value'), !view.hasPlan ? '—' : view.penetration === null
       ? `${view.spentMs < 0 ? '−' : ''}${duration(view.spentMs, true)}` : percentage(view.penetration));
     const fill = view.percentLeft === null ? 0 : clamp(view.percentLeft, 0, 100);
@@ -1039,23 +1079,23 @@ class UIManager {
     $('buffer-fill').dataset.tone = view.tone;
     $('buffer-fill').style.width = `${fill}%`;
     $('buffer-track').setAttribute('aria-valuenow', String(Math.round(fill)));
-    $('buffer-track').setAttribute('aria-valuetext', view.percentLeft === null ? 'Процент неприменим'
+    $('buffer-track').setAttribute('aria-valuetext', view.percentLeft === null ? t('Процент неприменим')
       : `${percentage(view.percentLeft)} · ${duration(view.remainingMs, true)}`);
-    let tip = view.hasPlan ? message : 'Добавьте задачи с двумя оценками времени.';
+    let tip = t(view.hasPlan ? message : 'Добавьте задачи с двумя оценками времени.');
     if (state.timer.phase === 'done') {
-      tip = view.remainingMs < 0 ? `Обещанный финиш превышен на ${duration(view.remainingMs, true)}.`
-        : `На момент финиша осталось ${duration(view.remainingMs, true)} резерва.`;
+      tip = view.remainingMs < 0 ? t`Обещанный финиш превышен на ${duration(view.remainingMs, true)}.`
+        : t`На момент финиша осталось ${duration(view.remainingMs, true)} резерва.`;
     } else if (view.bufferMs > 0 && view.remainingMs === 0) {
-      tip = 'Резерв исчерпан. Пересмотрите объём задач или срок.';
+      tip = t('Резерв исчерпан. Пересмотрите объём задач или срок.');
     }
     display($('risk-tip'), tip);
     $('chart-progress').hidden = !view.hasPlan;
-    display($('chart-progress'), `Готово ${percentage(view.progress)}`);
+    display($('chart-progress'), t`Готово ${percentage(view.progress)}`);
     const chart = $('chart');
-    chart.hidden = view.hasPlan && view.penetration === null;
-    $('chart-empty').hidden = !chart.hidden;
-    if (chart.hidden) {
-      display($('chart-empty'), `Готовность ${percentage(view.progress)}. Для диагональных зон нужен исходный резерв.`);
+    const hasPoint = view.penetration !== null;
+    $('chart-data').setAttribute('visibility', hasPoint ? 'visible' : 'hidden');
+    if (!hasPoint) {
+      chart.setAttribute('aria-label', t('График расхода буфера и прогресса'));
       return;
     }
     const point = {x: view.progress, y: view.penetration ?? 0};
@@ -1065,20 +1105,20 @@ class UIManager {
     $('chart-trend').setAttribute('points', trend.join(' '));
     if (this.lastPoints !== points) {
       $('chart-history').innerHTML = points.map(item => `<circle class="point" cx="${chartX(item.x)}" cy="${chartY(item.y)}" r="2.4">
-        <title>Готовность ${percentage(item.x)}, расход ${percentage(item.y)}</title></circle>`).join('');
+        <title>${t`Готовность ${percentage(item.x)}, расход буфера ${percentage(item.y)}`}</title></circle>`).join('');
       this.lastPoints = points;
     }
     const marker = $('chart-current');
     marker.setAttribute('transform', `translate(${live.replace(',', ' ')})`);
-    const summary = `Готовность ${percentage(point.x)}, расход буфера ${percentage(point.y)}`;
+    const summary = t`Готовность ${percentage(point.x)}, расход буфера ${percentage(point.y)}`;
     display(marker.querySelector('title'), summary);
     chart.setAttribute('aria-label', summary);
   }
 
   renderForecast(state, view, now) {
     const done = state.timer.phase === 'done';
-    display($('earliest-label'), done ? 'Фактический финиш' : view.estimateExhausted ? 'Нижняя граница' : 'По базовой оценке');
-    display($('guarded-label'), done ? 'Изначально с запасом' : view.estimateExhausted ? 'Уточните остаток' : 'С запасом задач');
+    display($('earliest-label'), done ? t('Фактический финиш') : view.estimateExhausted ? t('Нижняя граница') : t('По базовой оценке'));
+    display($('guarded-label'), done ? t('Изначально с запасом') : view.estimateExhausted ? t('Уточните остаток') : t('С запасом задач'));
     for (const [key, stamp] of [['earliest', view.earliest], ['guarded', done ? view.protectedFinish : view.estimateExhausted ? null : view.guarded]]) {
       const {time, day} = timeParts(stamp, now);
       display($(`${key}-time`), time);
@@ -1088,18 +1128,18 @@ class UIManager {
     display($('protected-time'), fullTime(view.protectedFinish, now));
     const status = deadlineStatus(view, state.window.finish, state.timer.phase);
     $('deadline-fit').dataset.tone = status.tone;
-    display($('fit-label'), status.label);
-    let detail = status.detail;
+    display($('fit-label'), t(status.label));
+    let detail = status.detail ? t(status.detail) : '';
     if (status.margin !== undefined) {
       const span = duration(status.margin, true);
       const finish = fullTime(state.window.finish, now);
-      detail = status.margin === 0 ? `Ровно к сроку ${finish}.`
-        : status.margin < 0 ? `До срока ${finish} не хватает ${span}.`
-        : `До срока ${finish} остаётся ${span}.`;
+      detail = status.margin === 0 ? t`Ровно к сроку ${finish}.`
+        : status.margin < 0 ? t`До срока ${finish} не хватает ${span}.`
+        : t`До срока ${finish} остаётся ${span}.`;
     }
     display($('fit-detail'), detail);
     const {start, finish} = state.window;
-    const windowParts = [start === null ? '' : `с ${fullTime(start, now)}`, finish === null ? '' : `до ${fullTime(finish, now)}`].filter(Boolean);
+    const windowParts = [start === null ? '' : t`с ${fullTime(start, now)}`, finish === null ? '' : t`до ${fullTime(finish, now)}`].filter(Boolean);
     display($('window-mini'), windowParts.join(' '));
   }
 }
@@ -1240,7 +1280,7 @@ function bindTheme(storage) {
   const refresh = () => {
     let saved;
     try { saved = androidBridge ? androidBridge.theme() : storage?.getItem(key); }
-    catch (error) { log('WARN', 'Theme.load', 'Не удалось прочитать тему', error); }
+    catch (error) { log('WARN', 'Theme.load', t('Не удалось прочитать тему'), error); }
     choice.value = saved === 'light' || saved === 'dark' ? saved : 'system';
     render();
   };
@@ -1249,7 +1289,7 @@ function bindTheme(storage) {
     try {
       if (androidBridge) androidBridge.setTheme(choice.value);
       else storage?.setItem(key, choice.value);
-    } catch (error) { log('WARN', 'Theme.save', 'Не удалось сохранить тему', error); }
+    } catch (error) { log('WARN', 'Theme.save', t('Не удалось сохранить тему'), error); }
   });
   if (system.addEventListener) system.addEventListener('change', render);
   else system.addListener(render);
@@ -1269,8 +1309,9 @@ function boot() {
     };
   } else {
     try { storage = window.localStorage; }
-    catch (error) { log('WARN', 'StateManager.open', 'Хранилище браузера недоступно', error); }
+    catch (error) { log('WARN', 'StateManager.open', t('Хранилище браузера недоступно'), error); }
   }
+  appLanguage = selectedLanguage('system');
   const refreshTheme = bindTheme(storage);
   const store = new StateManager(storage, message => fieldError($('storage-warning'), message));
   const ui = new UIManager(store);
@@ -1302,6 +1343,7 @@ function boot() {
     keep.checked = androidBridge.keepScreen();
     volume.value = androidBridge.signalVolume();
     store.acceptStorage(storage.getItem(STORAGE_KEY));
+    ui.refreshLanguage();
     ui.tick();
   };
   window.uspevatorAndroidImport = text => ui.importFile({text: () => Promise.resolve(text)});

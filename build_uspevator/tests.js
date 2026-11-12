@@ -576,7 +576,22 @@ function runSelfTests() {
     assert(!pendingRow(task, 0, 1).includes('<img'));
     equal(chartPoint(100, 110), chartPoint(100, 100));
     equal(chartPoint(0, -10), chartPoint(0, 0));
-    assert(chartSetup().includes('Готовность'));
+    assert(chartSetup().includes(t('Готовность, %')));
+  });
+
+  test('Язык по системе и ручной выбор сохраняются в данных плана', () => {
+    equal(resolveLanguage('system', 'ru-RU'), 'ru');
+    equal(resolveLanguage('system', 'en-GB'), 'en');
+    equal(resolveLanguage('system', 'fr-FR'), 'en');
+    equal(resolveLanguage('en', 'ru'), 'en');
+    equal(resolveLanguage('ru', 'en'), 'ru');
+    const old = emptyState();
+    delete old.settings.language;
+    equal(readState(old).settings.language, 'system');
+    const plan = {...example(), settings: {...old.settings, language: 'en'}};
+    equal(readState(plan).settings.language, 'en');
+    equal(parseImport(JSON.stringify(exportBackup(plan, T))).state.settings.language, 'en');
+    equal(TaskManager.newPlan(plan).settings.language, 'en');
   });
 
   console.info(`[INFO] Tests.run: Пройдено ${passed} из ${total}`);

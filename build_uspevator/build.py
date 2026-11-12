@@ -3,7 +3,7 @@ from pathlib import Path
 base = Path("build_uspevator")
 shell = (base / "shell.html").read_text()
 css = (base / "style.css").read_text()
-js = "\n".join((base / name).read_text() for name in ("core.js", "ui.js", "tests.js"))
+js = "\n".join((base / name).read_text() for name in ("i18n.js", "core.js", "ui.js", "tests.js"))
 assert "</script" not in js.lower()
 compiled = shell.replace("/* APP_CSS */", css).replace("/* APP_JS */", js + "\nboot();\n")
 Path("uspevator.html").write_text(compiled)

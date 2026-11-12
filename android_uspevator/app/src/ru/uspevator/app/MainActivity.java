@@ -84,7 +84,7 @@ public final class MainActivity extends Activity implements SharedPreferences.On
             web.loadDataWithBaseURL(APP_URL, readText(stream), "text/html", "UTF-8", APP_URL);
         } catch (IOException error) {
             Log.e("Uspevator", "Could not load UI", error);
-            toast("Не удалось открыть Успеватор.");
+            toast(R.string.ui_open_failed);
             finish();
         }
     }
@@ -164,7 +164,7 @@ public final class MainActivity extends Activity implements SharedPreferences.On
                 if (APP_URL.equals(uri.buildUpon().fragment(null).build().toString())) return false;
                 if (request.isForMainFrame() && request.hasGesture() && "https".equals(uri.getScheme())) {
                     try { startActivity(new Intent(Intent.ACTION_VIEW, uri)); }
-                    catch (ActivityNotFoundException error) { toast("Браузер для этой ссылки не найден."); }
+                    catch (ActivityNotFoundException error) { toast(R.string.browser_unavailable); }
                 }
                 return true;
             }
@@ -181,7 +181,7 @@ public final class MainActivity extends Activity implements SharedPreferences.On
 
             @Override public boolean onRenderProcessGone(WebView view, RenderProcessGoneDetail detail) {
                 pageReady = false;
-                toast("Экран Успеватора закрылся. Откройте приложение снова.");
+                toast(R.string.ui_closed);
                 finish();
                 return true;
             }
@@ -281,7 +281,7 @@ public final class MainActivity extends Activity implements SharedPreferences.On
                 .putExtra(Settings.EXTRA_APP_PACKAGE, getPackageName()));
         } catch (ActivityNotFoundException error) {
             shadeSettingsPending = false;
-            toast("Разрешите уведомления Успеватора в настройках Android.");
+            toast(R.string.notification_permission);
             refresh();
         }
     }
@@ -293,7 +293,7 @@ public final class MainActivity extends Activity implements SharedPreferences.On
         if (PlanNotification.allowed(this)) saveShadeTimer(true);
         else {
             refresh();
-            toast("Для таймера в шторке нужны уведомления Успеватора.");
+            toast(R.string.notification_timer_permission);
         }
     }
 
@@ -321,7 +321,7 @@ public final class MainActivity extends Activity implements SharedPreferences.On
         PlanState plan = PlanStore.readPlan(this);
         if (Objects.equals(pendingToken, plan == null ? null : plan.token)) {
             evaluate("window.uspevatorAndroidForm(" + JSONObject.quote(pendingForm) + ")");
-        } else toast("План обновился. Выберите действие ещё раз.");
+        } else toast(R.string.widget_stale_form);
         pendingForm = null;
         pendingToken = null;
     }
@@ -331,7 +331,7 @@ public final class MainActivity extends Activity implements SharedPreferences.On
         catch (ActivityNotFoundException error) {
             pickerBusy = false;
             if (requestCode == EXPORT) pendingExport().delete();
-            toast("Системный выбор файлов недоступен.");
+            toast(R.string.file_picker_unavailable);
         }
     }
 
@@ -340,7 +340,7 @@ public final class MainActivity extends Activity implements SharedPreferences.On
     private void prepareExport(String filename, String data) {
         if (pickerBusy) return;
         if (data == null || data.length() > PlanStore.MAX_JSON_BYTES) {
-            toast("Резервная копия слишком велика.");
+            toast(R.string.backup_too_large);
             return;
         }
         pickerBusy = true;
@@ -351,7 +351,7 @@ public final class MainActivity extends Activity implements SharedPreferences.On
                 stream.write(bytes);
             } catch (IOException error) {
                 pendingExport().delete();
-                documentError("Не удалось подготовить экспорт.", error);
+                documentError(R.string.export_prepare_failed, error);
                 return;
             }
             main.post(() -> {
@@ -396,17 +396,17 @@ public final class MainActivity extends Activity implements SharedPreferences.On
                     int length;
                     while ((length = source.read(buffer)) != -1) out.write(buffer, 0, length);
                 }
-                main.post(() -> { pickerBusy = false; toast("Файл сохранён."); });
+                main.post(() -> { pickerBusy = false; toast(R.string.file_saved); });
             }
         } catch (IOException | SecurityException error) {
-            documentError(requestCode == IMPORT ? "Не удалось прочитать файл JSON." : "Не удалось сохранить файл.", error);
+            documentError(requestCode == IMPORT ? R.string.json_read_failed : R.string.file_save_failed, error);
         } finally {
             if (requestCode == EXPORT) pendingExport().delete();
         }
     }
 
-    private void documentError(String message, Exception error) {
-        Log.w("Uspevator", message, error);
+    private void documentError(int message, Exception error) {
+        Log.w("Uspevator", AppLanguage.text(this, message), error);
         main.post(() -> { pickerBusy = false; toast(message); });
     }
 
@@ -427,9 +427,11 @@ public final class MainActivity extends Activity implements SharedPreferences.On
         TimerService.reconcile(this, true);
     }
 
-    private void toast(String message) { Toast.makeText(this, message, Toast.LENGTH_SHORT).show(); }
+    private void toast(int message) { Toast.makeText(this, AppLanguage.text(this, message), Toast.LENGTH_SHORT).show(); }
 
     public final class Bridge {
+        @JavascriptInterface public String systemLanguage() { return AppLanguage.systemLanguage(); }
+
         @JavascriptInterface public String theme() { return prefs.getString(PlanStore.THEME, "system"); }
 
         @JavascriptInterface public boolean systemDark() { return MainActivity.this.systemDark(); }
@@ -485,7 +487,7 @@ public final class MainActivity extends Activity implements SharedPreferences.On
 
         @JavascriptInterface public boolean testSignal() {
             main.post(() -> {
-                if (!TimerService.testSignal(MainActivity.this)) toast("Android не запустил сигнал таймера.");
+                if (!TimerService.testSignal(MainActivity.this)) toast(R.string.signal_start_failed);
             });
             return true;
         }
@@ -495,7 +497,7 @@ public final class MainActivity extends Activity implements SharedPreferences.On
                 AppWidgetManager manager = AppWidgetManager.getInstance(MainActivity.this);
                 ComponentName widget = new ComponentName(MainActivity.this, PlanWidget.class);
                 if (!manager.isRequestPinAppWidgetSupported() || !manager.requestPinAppWidget(widget, null, null)) {
-                    toast("Добавьте Успеватор через меню виджетов рабочего стола.");
+                    toast(R.string.pin_widget_hint);
                 }
             });
         }

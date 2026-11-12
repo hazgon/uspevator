@@ -39,25 +39,25 @@ function estimate(value, label, fromField = false) {
   if (fromField) {
     const text = String(value).trim().replace(',', '.');
     if (!/^(?:\d+(?:\.\d+)?|\.\d+)$/.test(text)) {
-      throw new Error(`${label}. Укажите неотрицательное число минут.`);
+      throw new Error(t`${label}. Укажите неотрицательное число минут.`);
     }
     value = Number(text);
   }
   if (typeof value !== 'number' || value < 0 || !isDuration(asMs(value))) {
-    throw new Error(`${label}. Укажите неотрицательное число минут.`);
+    throw new Error(t`${label}. Укажите неотрицательное число минут.`);
   }
   return value;
 }
 
 function taskFields(input, fromField = false) {
   if (!isObject(input) || typeof input.name !== 'string' || !input.name.trim()) {
-    throw new Error('Укажите название задачи.');
+    throw new Error(t('Укажите название задачи.'));
   }
-  const minTime = estimate(input.minTime ?? input.optimisticEstimate, 'Базовая оценка', fromField);
-  const maxTime = estimate(input.maxTime ?? input.pessimisticEstimate, 'Оценка с запасом', fromField);
-  if (maxTime < minTime) throw new Error('Оценка с запасом должна быть не меньше базовой.');
+  const minTime = estimate(input.minTime ?? input.optimisticEstimate, t('Базовая оценка'), fromField);
+  const maxTime = estimate(input.maxTime ?? input.pessimisticEstimate, t('Оценка с запасом'), fromField);
+  if (maxTime < minTime) throw new Error(t('Оценка с запасом должна быть не меньше базовой.'));
   if (input.firstStep !== undefined && typeof input.firstStep !== 'string') {
-    throw new Error('Первый шаг должен быть текстом.');
+    throw new Error(t('Первый шаг должен быть текстом.'));
   }
   return {name: input.name.trim(), minTime, maxTime, firstStep: input.firstStep?.trim() || ''};
 }
@@ -76,7 +76,7 @@ function emptyTimer() {
 function emptyState() {
   return {
     version: VERSION, tasks: [], templates: [], pastRuns: [], timer: emptyTimer(),
-    window: {start: null, finish: null}, settings: {sound: true, logLevel: 'WARN'}
+    window: {start: null, finish: null}, settings: {sound: true, logLevel: 'WARN', language: 'system'}
   };
 }
 
@@ -371,7 +371,7 @@ const Timer = {
 };
 
 function templateName(value) {
-  if (typeof value !== 'string' || !value.trim()) throw new Error('Укажите название шаблона.');
+  if (typeof value !== 'string' || !value.trim()) throw new Error(t('Укажите название шаблона.'));
   return value.trim();
 }
 
@@ -402,36 +402,36 @@ const TemplateManager = {
 // Imports are fully validated before any state is committed. New task IDs isolate
 // templates, copied tasks, and the daily plan from one another.
 function readTemplates(raw, createId, keepIds = false) {
-  if (!Array.isArray(raw)) throw new Error('В JSON должен быть массив templates.');
+  if (!Array.isArray(raw)) throw new Error(t('В JSON должен быть массив templates.'));
   const seen = new Set();
   return raw.map((item, i) => {
     try {
-      if (!isObject(item) || !Array.isArray(item.tasks)) throw new Error('Нужен массив задач tasks.');
+      if (!isObject(item) || !Array.isArray(item.tasks)) throw new Error(t('Нужен массив задач tasks.'));
       const name = templateName(item.name);
       const id = keepIds ? readId(item.id, seen) : createId();
       return {id, name, tasks: item.tasks.map((task, j) => {
         try { return taskFields(task); }
-        catch (error) { throw new Error(`Задача ${j + 1}. ${error.message}`); }
+        catch (error) { throw new Error(t`Задача ${j + 1}. ${error.message}`); }
       })};
     } catch (error) {
-      throw new Error(`Шаблон ${i + 1}. ${error.message}`);
+      throw new Error(t`Шаблон ${i + 1}. ${error.message}`);
     }
   });
 }
 
 function readId(value, seen) {
-  if (typeof value !== 'string' || !value || seen.has(value)) throw new Error('Некорректный идентификатор.');
+  if (typeof value !== 'string' || !value || seen.has(value)) throw new Error(t('Некорректный идентификатор.'));
   seen.add(value);
   return value;
 }
 
 function readTimer(raw, tasks) {
-  if (!isObject(raw) || !PHASES.includes(raw.phase)) throw new Error('Некорректное состояние таймера.');
+  if (!isObject(raw) || !PHASES.includes(raw.phase)) throw new Error(t('Некорректное состояние таймера.'));
   const {phase, startedAt, runningSince, finishedAt, activeId, baselineMs, bufferMs} = raw;
   const pausedSince = raw.pausedSince ?? null;
   if (phase === 'idle') {
     if (tasks.some(task => task.done || task.workedMs || task.remainingMs !== null)) {
-      throw new Error('У незапущенного плана обнаружена история.');
+      throw new Error(t('У незапущенного плана обнаружена история.'));
     }
     return emptyTimer();
   }
@@ -441,12 +441,12 @@ function readTimer(raw, tasks) {
         : !open || open.id !== activeId || finishedAt !== null)
       || (phase === 'running' ? !isStamp(runningSince) || runningSince < startedAt : runningSince !== null)
       || (pausedSince !== null && (phase !== 'paused' || !isStamp(pausedSince) || pausedSince < startedAt))) {
-    throw new Error('Состояние таймера не согласуется с планом.');
+    throw new Error(t('Состояние таймера не согласуется с планом.'));
   }
-  if (!Array.isArray(raw.points)) throw new Error('Некорректная история буфера.');
+  if (!Array.isArray(raw.points)) throw new Error(t('Некорректная история буфера.'));
   const points = raw.points.slice(-CHART_HISTORY_LIMIT).map(point => {
     if (!isObject(point) || !Number.isFinite(point.x) || point.x < 0 || point.x > 100
-        || !Number.isFinite(point.y) || !isStamp(point.at)) throw new Error('Некорректная точка графика.');
+        || !Number.isFinite(point.y) || !isStamp(point.at)) throw new Error(t('Некорректная точка графика.'));
     return {x: point.x, y: point.y, at: point.at};
   });
   return {phase, startedAt, runningSince, pausedSince, finishedAt, activeId, baselineMs, bufferMs, points};
@@ -454,14 +454,14 @@ function readTimer(raw, tasks) {
 
 function readPastRuns(raw) {
   if (raw === undefined) return [];
-  if (!Array.isArray(raw)) throw new Error('Некорректная история планов.');
+  if (!Array.isArray(raw)) throw new Error(t('Некорректная история планов.'));
   return raw.slice(-RUN_HISTORY_LIMIT).map(run => {
     if (!isObject(run) || !isStamp(run.startedAt) || !isStamp(run.finishedAt) || run.finishedAt < run.startedAt
         || (run.protectedFinish !== null && !isStamp(run.protectedFinish))
-        || !Array.isArray(run.tasks)) throw new Error('Некорректная запись истории планов.');
+        || !Array.isArray(run.tasks)) throw new Error(t('Некорректная запись истории планов.'));
     const tasks = run.tasks.map(task => {
       if (!isObject(task) || typeof task.name !== 'string' || !isDuration(task.workedMs)
-          || typeof task.excluded !== 'boolean') throw new Error('Некорректная задача в истории планов.');
+          || typeof task.excluded !== 'boolean') throw new Error(t('Некорректная задача в истории планов.'));
       return {name: task.name, workedMs: task.workedMs, excluded: task.excluded};
     });
     return {startedAt: run.startedAt, finishedAt: run.finishedAt, protectedFinish: run.protectedFinish, tasks};
@@ -469,16 +469,16 @@ function readPastRuns(raw) {
 }
 
 function readState(raw, createId = uid) {
-  if (!isObject(raw)) throw new Error('Файл должен содержать JSON-объект.');
+  if (!isObject(raw)) throw new Error(t('Файл должен содержать JSON-объект.'));
   // Older data only contained tasks and templates. Restore the plan as a draft.
   if (raw.version === undefined) {
-    if (!Array.isArray(raw.tasks) && !Array.isArray(raw.templates)) throw new Error('План и шаблоны не найдены.');
+    if (!Array.isArray(raw.tasks) && !Array.isArray(raw.templates)) throw new Error(t('План и шаблоны не найдены.'));
     return {
       ...emptyState(), tasks: (raw.tasks ?? []).map(task => makeTask(taskFields(task), createId())),
       templates: readTemplates(raw.templates ?? [], createId)
     };
   }
-  if (raw.version !== VERSION || !Array.isArray(raw.tasks)) throw new Error('Эта версия данных не поддерживается.');
+  if (raw.version !== VERSION || !Array.isArray(raw.tasks)) throw new Error(t('Эта версия данных не поддерживается.'));
   const seen = new Set();
   const tasks = raw.tasks.map(task => {
     const fields = taskFields(task);
@@ -487,26 +487,26 @@ function readState(raw, createId = uid) {
     if (!isDuration(workedMs) || !isDuration(referenceMs)
         || (remainingMs !== null && !isDuration(remainingMs)) || typeof done !== 'boolean'
         || (excluded !== undefined && (typeof excluded !== 'boolean' || (excluded && !done)))) {
-      throw new Error('Некорректные данные о выполнении задачи.');
+      throw new Error(t('Некорректные данные о выполнении задачи.'));
     }
     if (referenceMs > workedMs && !(raw.timer?.phase === 'running' && raw.timer.activeId === id)) {
-      throw new Error('Оценка остатка не согласуется со временем задачи.');
+      throw new Error(t('Оценка остатка не согласуется со временем задачи.'));
     }
     return {...fields, id, workedMs, referenceMs, remainingMs, done, ...(excluded ? {excluded: true} : {})};
   });
   const dayWindow = raw.window;
   if (!isObject(dayWindow) || ![dayWindow.start, dayWindow.finish].every(value => value === null || isStamp(value))
       || (dayWindow.start !== null && dayWindow.finish !== null && dayWindow.finish < dayWindow.start)) {
-    throw new Error('Некорректное окно дня.');
+    throw new Error(t('Некорректное окно дня.'));
   }
   const settings = raw.settings;
   if (!isObject(settings) || typeof settings.sound !== 'boolean' || !LEVELS.includes(settings.logLevel)) {
-    throw new Error('Некорректные настройки.');
+    throw new Error(t('Некорректные настройки.'));
   }
   return {
     version: VERSION, tasks, templates: readTemplates(raw.templates, createId, true), pastRuns: readPastRuns(raw.pastRuns),
     timer: readTimer(raw.timer, tasks), window: {start: dayWindow.start, finish: dayWindow.finish},
-    settings: {sound: settings.sound, logLevel: settings.logLevel}
+    settings: {sound: settings.sound, logLevel: settings.logLevel, language: normalizeLanguage(settings.language)}
   };
 }
 
@@ -522,10 +522,10 @@ function exportTemplates(state) {
 function parseImport(text, createId = uid) {
   let raw;
   try { raw = JSON.parse(text.replace(/^\uFEFF/, '')); }
-  catch (error) { throw new Error('В файле некорректный JSON.', {cause: error}); }
+  catch (error) { throw new Error(t('В файле некорректный JSON.'), {cause: error}); }
   if (raw?.format === BACKUP_FORMAT) {
     const state = readState(raw.state, createId);
-    if (state.timer.phase === 'running') throw new Error('Резервная копия должна содержать снимок на паузе.');
+    if (state.timer.phase === 'running') throw new Error(t('Резервная копия должна содержать снимок на паузе.'));
     return {kind: 'backup', state};
   }
   return {kind: 'templates', templates: readTemplates(raw?.templates, createId)};
@@ -544,7 +544,7 @@ class StateManager {
     this.unreadable = false;
     this.subscribers = new Set();
     if (!storage) {
-      this.onWarning('Хранилище браузера недоступно. Для сохранения скачайте резервную копию.');
+      this.onWarning(t('Хранилище браузера недоступно. Для сохранения скачайте резервную копию.'));
       return;
     }
     try {
@@ -552,7 +552,7 @@ class StateManager {
       if (this.raw !== null) this.state = readState(JSON.parse(this.raw));
     } catch (error) {
       this.unreadable = true;
-      this.reportStorage('Сохранённые данные не удалось прочитать. Проверьте резервную копию.', error);
+      this.reportStorage(t('Сохранённые данные не удалось прочитать. Проверьте резервную копию.'), error);
     }
   }
 
@@ -586,7 +586,7 @@ class StateManager {
     } catch (error) {
       this.raw = raw;
       this.unreadable = true;
-      this.reportStorage('Не удалось прочитать обновление плана.', error);
+      this.reportStorage(t('Не удалось прочитать обновление плана.'), error);
       return false;
     }
   }
@@ -601,7 +601,7 @@ class StateManager {
           return false;
         }
         if (this.unreadable && operation !== 'ImportExportManager.importBackup') {
-          this.onWarning('Сохранённый план повреждён. Восстановите резервную копию через «Импорт JSON».');
+          this.onWarning(t('Сохранённый план повреждён. Восстановите резервную копию через «Импорт JSON».'));
           return false;
         }
         const raw = JSON.stringify(next);
@@ -611,17 +611,17 @@ class StateManager {
             this.acceptStorage(this.storage.getItem(STORAGE_KEY));
             return false;
           }
-          if (result !== 'ok') throw new Error('Не удалось записать план.');
+          if (result !== 'ok') throw new Error(t('Не удалось записать план.'));
         } else this.storage.setItem(STORAGE_KEY, raw);
         this.raw = raw;
         this.unreadable = false;
         this.onWarning('');
       } catch (error) {
         if (this.storage.compareAndSet) {
-          this.reportStorage('Не удалось сохранить изменение плана.', error);
+          this.reportStorage(t('Не удалось сохранить изменение плана.'), error);
           return false;
         }
-        this.reportStorage('Изменения остались в этой вкладке. Скачайте резервную копию, чтобы их сохранить.', error);
+        this.reportStorage(t('Изменения остались в этой вкладке. Скачайте резервную копию, чтобы их сохранить.'), error);
       }
     }
     const before = this.state;
@@ -630,11 +630,11 @@ class StateManager {
       const changes = {};
       if (before.tasks !== next.tasks) changes.tasks = {before: before.tasks, after: next.tasks};
       if (before.templates !== next.templates) changes.templates = {before: before.templates, after: next.templates};
-      log('INFO', operation, 'Данные изменены', changes, threshold);
+      log('INFO', operation, t('Данные изменены'), changes, threshold);
     }
     if (before.timer !== next.timer) {
       const view = metrics(next, now);
-      log('INFO', operation, 'Состояние таймера', {
+      log('INFO', operation, t('Состояние таймера'), {
         phase: next.timer.phase, taskId: next.timer.activeId,
         elapsedMs: view.activeElapsed, bufferLeftMs: view.remainingMs
       }, threshold);
@@ -674,7 +674,7 @@ class SoundManager {
   async unlock(preview = false) {
     try {
       const Context = globalThis.AudioContext || globalThis.webkitAudioContext;
-      if (!Context) throw new Error('Этот браузер не поддерживает звуковые сигналы.');
+      if (!Context) throw new Error(t('Этот браузер не поддерживает звуковые сигналы.'));
       if (!this.context || this.context.state === 'closed') {
         this.context = new Context();
         this.context.addEventListener('statechange', () => {

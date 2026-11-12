@@ -34,7 +34,7 @@ def fixture(n, done=False):
 with sync_playwright() as pw:
     browser=pw.chromium.launch(executable_path=str(chrome),
         args=['--no-sandbox','--disable-dev-shm-usage','--single-process','--no-zygote','--disable-gpu'])
-    page=browser.new_page(viewport=viewport, has_touch=not desktop, is_mobile=not desktop)
+    page=browser.new_page(viewport=viewport, has_touch=not desktop, is_mobile=not desktop, locale='ru-RU')
     errors=[]
     page.on('pageerror', lambda error: errors.append(str(error)))
     page.goto(path.as_uri())

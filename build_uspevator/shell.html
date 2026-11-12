@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="ru">
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -54,6 +54,11 @@
         <details class="app-menu" id="app-menu">
           <summary class="btn btn-quiet icon-btn" aria-label="Меню"><svg class="icon" aria-hidden="true"><use href="#i-more"/></svg></summary>
           <div class="menu-panel">
+            <label class="menu-theme field"><span>Язык</span><select id="language-choice">
+              <option value="system">Как в системе</option>
+              <option value="en">English</option>
+              <option value="ru">Русский</option>
+            </select></label>
             <label class="menu-theme field"><span>Тема</span><select id="theme-choice">
               <option value="system">Как в системе</option>
               <option value="light">Светлая</option>
@@ -77,7 +82,7 @@
   </header>
 
   <main id="top" class="container">
-    <noscript><p class="notice danger">Для работы Успеватора включите JavaScript в браузере.</p></noscript>
+    <noscript><p class="notice danger">Enable JavaScript to use Uspevator.</p></noscript>
     <p class="notice danger" id="storage-warning" role="alert" hidden></p>
     <section class="focus card" aria-labelledby="focus-heading">
       <div class="focus-content">
@@ -127,7 +132,7 @@
             <div class="focus-promise"><span id="focus-promise-label">Обещано к</span><strong id="focus-promise-time">—</strong></div>
             <div class="focus-promise" id="focus-forecast" hidden><span id="focus-forecast-label">Прогноз с запасом</span><strong id="focus-forecast-time">—</strong></div>
           </div>
-          <button type="button" class="focus-reserve" id="focus-reserve" data-action="plan-details" aria-label="Подробности буфера плана">
+          <button type="button" class="focus-reserve" id="focus-reserve" data-action="show-buffer" aria-label="Открыть график запаса времени">
             <span class="focus-reserve-content" aria-hidden="true">
               <span class="risk-strip"><i id="risk-strip-marker"></i></span>
               <span id="risk-strip-label"></span>
@@ -136,6 +141,30 @@
         </div>
         <p class="focus-hint" id="focus-hint" hidden></p>
       </div>
+    </section>
+
+    <section class="card buffer" aria-labelledby="buffer-heading">
+      <div class="card-head buffer-head">
+        <div class="title-line"><span class="section-icon"><svg class="icon" aria-hidden="true"><use href="#i-chart"/></svg></span><h2 id="buffer-heading" tabindex="-1">Диагональный буфер</h2></div>
+        <span class="pill" id="risk-badge" data-tone="neutral"><span class="dot"></span><span>Ожидание</span></span>
+      </div>
+      <div class="buffer-metrics">
+        <div>
+          <span class="metric-label" id="reserve-label">Резерв времени</span>
+          <strong class="metric-number" id="reserve-value">—</strong>
+        </div>
+        <div class="buffer-right">
+          <span class="metric-label">Израсходовано</span>
+          <strong class="metric-number" id="burn-value">—</strong>
+        </div>
+      </div>
+      <div class="buffer-track" id="buffer-track" role="meter" aria-label="Остаток резерва" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+        <div id="buffer-fill" data-tone="neutral"></div>
+      </div>
+      <div class="chart-wrap">
+        <svg id="chart" class="chart" viewBox="0 0 420 174" role="img" aria-label="График расхода буфера и прогресса"></svg>
+      </div>
+      <div class="chart-caption"><p id="risk-tip">Добавьте задачи с двумя оценками времени.</p><span id="chart-progress" hidden></span></div>
     </section>
 
     <div class="planning-layout">
@@ -170,7 +199,7 @@
         <p class="notice" id="done-plan-note" hidden>Нажмите «Новый список», чтобы добавить новые задачи, или «Повторить», чтобы заново выполнить этот набор.</p>
         <div id="active-row"></div>
         <ul id="pending-list" class="task-list" aria-label="Очередь задач"></ul>
-        <div id="drop-tail" class="drop-tail" data-drop-tail aria-hidden="true" hidden></div>
+        <div id="drop-tail" class="drop-tail" data-drop-tail aria-hidden="true" hidden><span>Бросьте сюда, чтобы добавить в конец</span></div>
         <div id="queue-empty" class="queue-empty">
           <span class="empty-icon"><svg class="icon" aria-hidden="true"><use href="#i-list"/></svg></span>
           <strong>Очередь пока пуста</strong>
@@ -205,60 +234,34 @@
 
     <details class="plan-details" id="plan-details">
       <summary class="disclosure-head" id="plan-disclosure">
-        <svg class="icon" aria-hidden="true"><use href="#i-chart"/></svg><strong>Подробности плана</strong>
+        <svg class="icon" aria-hidden="true"><use href="#i-clock"/></svg><strong>Сроки плана</strong>
         <svg class="icon chevron" aria-hidden="true"><use href="#i-chev"/></svg>
       </summary>
-      <div class="workspace">
-      <section class="card buffer" aria-labelledby="buffer-heading">
-        <div class="card-head buffer-head">
-          <div class="title-line"><span class="section-icon"><svg class="icon" aria-hidden="true"><use href="#i-chart"/></svg></span><h2 id="buffer-heading">Диагональный буфер</h2></div>
-          <span class="pill" id="risk-badge" data-tone="neutral"><span class="dot"></span><span>Ожидание</span></span>
+      <section class="card forecast" aria-labelledby="forecast-heading">
+        <div class="card-head">
+          <div class="title-line"><span class="section-icon"><svg class="icon" aria-hidden="true"><use href="#i-clock"/></svg></span><h2 id="forecast-heading">Прогноз финиша</h2></div>
         </div>
-        <div class="buffer-metrics">
-          <div>
-            <span class="metric-label" id="reserve-label">Резерв времени</span>
-            <strong class="metric-number" id="reserve-value">—</strong>
-          </div>
-          <div class="buffer-right">
-            <span class="metric-label">Израсходовано</span>
-            <strong class="metric-number" id="burn-value">—</strong>
-          </div>
+        <div class="finish-grid">
+          <div class="finish-box"><span id="earliest-label">По базовой оценке</span><strong id="earliest-time">—</strong><small id="earliest-day" hidden></small></div>
+          <div class="finish-box"><span id="guarded-label">С запасом задач</span><strong id="guarded-time">—</strong><small id="guarded-day" hidden></small></div>
         </div>
-        <div class="buffer-track" id="buffer-track" role="meter" aria-label="Остаток резерва" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
-          <div id="buffer-fill" data-tone="neutral"></div>
+        <div class="protected-row"><span>Обещанный финиш</span><strong id="protected-time">—</strong></div>
+        <div class="fit" id="deadline-fit" data-tone="neutral">
+          <span class="dot"></span><div><strong id="fit-label">Срок не задан</strong><p id="fit-detail">Укажите, к какому времени нужно закончить.</p></div>
         </div>
-        <div class="chart-wrap">
-          <svg id="chart" class="chart" viewBox="0 0 420 174" role="img" aria-label="График расхода буфера и прогресса"></svg>
-          <div class="chart-empty" id="chart-empty" hidden></div>
-        </div>
-        <div class="chart-caption"><p id="risk-tip">Добавьте задачи с двумя оценками времени.</p><span id="chart-progress" hidden></span></div>
+        <details id="window-details" class="window-details">
+          <summary><svg class="icon" aria-hidden="true"><use href="#i-calendar"/></svg><span>Окно дня</span><span id="window-mini" class="window-mini"></span><svg class="icon chevron" aria-hidden="true"><use href="#i-chev"/></svg></summary>
+          <form id="window-form" class="window-form" novalidate>
+            <label class="field"><span>Запланированный старт</span><input id="planned-start" name="start" type="datetime-local"></label>
+            <label class="field"><span>Крайний срок</span><input id="deadline" name="finish" type="datetime-local"></label>
+            <p class="field-error" id="window-error" role="alert" hidden></p>
+            <div class="row-buttons">
+              <button class="btn btn-soft" type="submit">Сохранить окно</button>
+              <button class="btn btn-quiet" type="button" data-action="clear-window">Очистить</button>
+            </div>
+          </form>
+        </details>
       </section>
-        <section class="card forecast" aria-labelledby="forecast-heading">
-          <div class="card-head">
-            <div class="title-line"><span class="section-icon"><svg class="icon" aria-hidden="true"><use href="#i-clock"/></svg></span><h2 id="forecast-heading">Прогноз финиша</h2></div>
-          </div>
-          <div class="finish-grid">
-            <div class="finish-box"><span id="earliest-label">По базовой оценке</span><strong id="earliest-time">—</strong><small id="earliest-day" hidden></small></div>
-            <div class="finish-box"><span id="guarded-label">С запасом задач</span><strong id="guarded-time">—</strong><small id="guarded-day" hidden></small></div>
-          </div>
-          <div class="protected-row"><span>Обещанный финиш</span><strong id="protected-time">—</strong></div>
-          <div class="fit" id="deadline-fit" data-tone="neutral">
-            <span class="dot"></span><div><strong id="fit-label">Срок не задан</strong><p id="fit-detail">Укажите, к какому времени нужно закончить.</p></div>
-          </div>
-          <details id="window-details" class="window-details">
-            <summary><svg class="icon" aria-hidden="true"><use href="#i-calendar"/></svg><span>Окно дня</span><span id="window-mini" class="window-mini"></span><svg class="icon chevron" aria-hidden="true"><use href="#i-chev"/></svg></summary>
-            <form id="window-form" class="window-form" novalidate>
-              <label class="field"><span>Запланированный старт</span><input id="planned-start" name="start" type="datetime-local"></label>
-              <label class="field"><span>Крайний срок</span><input id="deadline" name="finish" type="datetime-local"></label>
-              <p class="field-error" id="window-error" role="alert" hidden></p>
-              <div class="row-buttons">
-                <button class="btn btn-soft" type="submit">Сохранить окно</button>
-                <button class="btn btn-quiet" type="button" data-action="clear-window">Очистить</button>
-              </div>
-            </form>
-          </details>
-        </section>
-      </div>
     </details>
     <footer class="footer"><span>Успеватор</span><span><span class="dot"></span> Данные хранятся на устройстве</span></footer>
   </main>
@@ -333,25 +336,19 @@
       <button class="btn icon-btn btn-quiet" type="button" data-action="close-help" aria-label="Закрыть"><svg class="icon" aria-hidden="true"><use href="#i-close"/></svg></button>
     </div>
     <div class="method">
-      <p>В управлении критической цепью общий резерв защищает срок сдачи, а питающие буферы защищают критическую цепь от задержек боковых веток. Здесь один исполнитель и последовательная очередь, поэтому используется один резерв дня.</p>
-      <h3>1. Соберите план и упростите старт</h3>
-      <p>Для каждой задачи задайте базовую оценку при нормальном ходе работы и оценку с запасом. Например, 20 и 35 минут. Вся разница между оценками складывается в один резерв дня. Для трудной задачи запишите конкретное первое действие, а в «Окне дня» укажите, когда приступите. Например, «в 10:00 открою письмо и выпишу вопросы».</p>
-      <p>Синдром студента проявляется, когда работа откладывается до момента, когда срок уже близко. Запланированный старт делает задержку видимой, а конкретный первый шаг даёт действие, с которого можно начать.</p>
-      <h3>2. Запустите одну задачу</h3>
-      <p>После «Готово» начинается следующая задача. Оценки времени служат ориентиром. «Уточнить остаток» обновляет прогноз и отмечает частичную готовность. Между такими отметками рабочий таймер уменьшает прогнозный остаток задачи. Горизонтальную позицию графика он сам по себе не меняет.</p>
-      <p>Пауза замораживает время работы над задачей, а время до финиша продолжает идти. «Пропустить» переносит задачу в конец очереди и сохраняет уже потраченное время. Для нового подхода берётся последняя введённая оценка остатка или исходная база. Если часть работы сделана, уточните остаток перед переносом.</p>
-      <h3>3. Смотрите на расход вместе с прогрессом</h3>
-      <p><strong>По вертикали</strong> отложен расход резерва. Из суммы календарного времени с начала плана и оценённого остатка работ вычитается исходная база. Досрочное выполнение может дать отрицательный расход. Опоздание к запланированному старту тоже уменьшает резерв.</p>
-      <p><strong>По горизонтали</strong> — готовность по базовым минутам задач. Завершение даёт полный вес задачи, а введённый остаток даёт подтверждённую часть. При нулевой сумме базовых оценок используется доля закрытых задач.</p>
-      <p>Порог внимания растёт от 5% до 45% по мере готовности, а порог вмешательства — от 55% до 95%. Это стартовые настройки графика. Шкала над ним отдельно показывает абсолютный остаток. Точки за пределами 0–100% отмечаются на краю графика, точный процент виден над ним.</p>
-      <h3>4. Проверяйте прогноз и срок</h3>
-      <p>Обещанный финиш равен началу плана плюс сумма оценок с запасом. При старте он фиксируется. Текущий прогноз пересчитывается по оставшейся работе и может сдвинуться. Если исчерпана верхняя оценка текущей задачи, уточните остаток для нового прогноза. Полоска риска показывает зону диагонального буфера всего плана.</p>
-      <p>Звук включён по умолчанию и активируется при первом нажатии. Два коротких сигнала отмечают конец оптимистичной оценки текущей задачи. Затем пики учащаются по мере расхода запаса этой задачи. На границе оценки с запасом они переходят в непрерывный писк. Пауза, переход к другой задаче и выключение звука останавливают его. Проверка доступна в «Диагностике».</p>
-      <h3>Следующий список и шаблоны</h3>
-      <p>«Новый список» открывает пустой план. Перед очисткой можно сохранить текущие задачи как шаблон. «Повторить список» возвращает тот же набор задач в очередь. Чтобы сохранить новый набор, добавьте задачи и нажмите «Сохранить как шаблон».</p>
-      <h3>Хранение и перенос</h3>
-      <p>Открывайте тот же HTML в том же браузере, чтобы продолжить план. Если закрыть файл при работающем таймере, прошедшее время будет учтено при открытии. Экспорт шаблонов сохраняет только шаблоны. Резервная копия сохраняет весь план и открывает выполнявшийся план на паузе. Импорт шаблонов заменяет только набор шаблонов.</p>
-      <p>Доступ к локальному хранилищу зависит от браузера и способа открытия HTML. Для переноса на другое устройство скачайте резервную копию.</p>
+      <p><strong>Заметить отставание, пока ещё можно успеть.</strong> Допустим, выйти нужно в 9:00. В 8:10 кофе допит, а на остальные сборы по плану нужно 55 минут. Прогноз показывает 9:05. Вы видите, сколько минут нужно наверстать, и ещё можете ускориться или изменить план.</p>
+      <h3>Составьте план с общим запасом</h3>
+      <p>Добавьте дела в порядке выполнения. Укажите время при хорошем темпе и время с запасом. Например, 10 и 15 минут. Эти пять минут прибавятся к общему запасу списка. Если одно дело займёт меньше времени, выигранные минуты пригодятся на другое.</p>
+      <p>В разделе «Сроки плана» откройте «Окно дня», чтобы указать время старта и крайний срок. Для задачи, к которой трудно приступить, запишите первое конкретное действие. Например, «открыть письмо и выписать вопросы».</p>
+      <h3>Следите за задачей и временем финиша</h3>
+      <p>Запустите таймер. Он показывает два отсчёта для текущего дела. После оптимистичной оценки звучит сигнал. Пока тратится запас этой задачи, сигнал учащается. Непрерывный звук означает, что запас задачи закончился. Нажмите «Готово», чтобы перейти к следующему делу.</p>
+      <p>«Обещано к» показывает время финиша, рассчитанное на старте. Сверяйте его с текущим прогнозом и своим крайним сроком. Если оценка текущей задачи закончилась, нажмите «Уточнить остаток» и введите, сколько времени ещё нужно.</p>
+      <p>«Пауза» останавливает отсчёт работы над задачей. Время до срока продолжает идти. «Пропустить» отправляет задачу в конец очереди и сохраняет уже потраченное время.</p>
+      <h3>Читайте три зоны графика</h3>
+      <p>Вправо — сколько плана выполнено. Готовность меняется, когда вы завершаете задачу или уточняете её остаток. Вверх — сколько общего запаса потрачено. Зелёная зона означает, что запас расходуется в норме. В жёлтой проверьте, сколько осталось работы. В красной пора изменить объём дел, порядок или срок.</p>
+      <p>Идея общего запаса взята из метода критической цепи (CCPM), подхода теории ограничений к управлению проектами. В Успеваторе она применяется к одному списку личных дел.</p>
+      <h3>Повторяйте планы и переносите данные</h3>
+      <p>Сохраните привычный список как шаблон. «Повторить» возвращает те же задачи в очередь, а «Новый список» открывает пустой план. Для переноса всех данных на другое устройство сохраните резервную копию в меню «Данные и диагностика».</p>
       <h3>Источники</h3>
       <ul class="sources">
         <li><a href="https://www.pmi.org/learning/library/2019/04/07/15/22/critical-chain-project-management-5852" target="_blank" rel="noopener noreferrer">PMI · Improving focus and predictability with critical chain project management</a></li>
