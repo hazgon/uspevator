@@ -328,9 +328,11 @@ class UIManager {
       } catch (error) { this.report('UIManager.submitDialog', error, $('dialog-error')); }
     });
     this.dialog.addEventListener('close', () => { this.dialogAction = null; });
-    $('about-dialog').addEventListener('close', () => {
-      $('app-menu').querySelector('summary').focus({preventScroll: true});
-    });
+    for (const dialog of [$('help-dialog'), $('about-dialog')]) {
+      dialog.addEventListener('close', () => {
+        $('app-menu').querySelector('summary').focus({preventScroll: true});
+      });
+    }
     const templatePicker = $('template-picker');
     templatePicker.addEventListener('close', () => {
       if (!templatePicker.open) document.documentElement.classList.remove('template-picker-open');
@@ -1326,7 +1328,7 @@ function boot() {
   const ui = new UIManager(store);
   if (!androidBridge) return;
   // Android hands user-initiated top-level HTTPS links to the default browser.
-  for (const link of $('about-dialog').querySelectorAll('a')) link.removeAttribute('target');
+  for (const link of document.querySelectorAll('#help-dialog a, #about-dialog a')) link.removeAttribute('target');
   const keep = $('android-keep-screen');
   $('android-tools').hidden = false;
   keep.checked = androidBridge.keepScreen();

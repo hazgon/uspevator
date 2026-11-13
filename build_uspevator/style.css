@@ -355,6 +355,9 @@ dialog::backdrop { background: #24183f69; }
 .method h3 { margin-top: 13px; }
 .method p, .sources { margin-top: 5px; color: var(--muted); font-size: .87rem; }
 .sources { padding-left: 19px; line-height: 1.55; }
+.sources li + li { margin-top: 5px; }
+.method-reading { margin-top: 8px; }
+.method-reading > summary { min-height: 44px; gap: 8px; color: var(--accent-ink); font-size: .9rem; }
 .toast {
   position: fixed; z-index: 20; inset-inline-end: max(14px, env(safe-area-inset-right)); bottom: max(14px, env(safe-area-inset-bottom));
   max-width: min(400px, 100% - 28px); padding: 10px 13px; border-radius: 11px;
