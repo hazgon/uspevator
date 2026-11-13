@@ -18,8 +18,9 @@
 
 Повторяющийся список можно сохранить как шаблон и использовать снова.
 
-## Скачать
+## Открыть или скачать
 
+- **Онлайн.** [Открыть Успеватор в браузере](https://uspevator.abashkin.su/)
 - **Android 8.0 и новее.** Виджет на рабочем столе и управление таймером из шторки уведомлений. [Скачать APK](https://github.com/hazgon/uspevator/releases/latest/download/uspevator.apk)
 - **Браузер.** Скачайте файл и откройте его в браузере. Работает без интернета. [Скачать HTML](https://github.com/hazgon/uspevator/releases/latest/download/uspevator.html)
 

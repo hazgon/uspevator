@@ -75,6 +75,7 @@
             <button type="button" class="btn btn-quiet menu-item" data-action="run-history">История планов</button>
             <button type="button" class="btn btn-quiet menu-item" data-action="data">Данные и диагностика</button>
             <button type="button" class="btn btn-quiet menu-item" data-action="help">Методика</button>
+            <button type="button" class="btn btn-quiet menu-item" data-action="about">О приложении</button>
           </div>
         </details>
       </div>
@@ -360,6 +361,26 @@
       </ul>
     </div>
     <div class="dialog-buttons"><button class="btn btn-primary" type="button" data-action="close-help">Понятно</button></div>
+  </dialog>
+
+  <dialog id="about-dialog" aria-labelledby="about-title">
+    <div class="dialog-head">
+      <h2 id="about-title">О приложении</h2>
+      <button class="btn icon-btn btn-quiet" type="button" data-action="close-about" aria-label="Закрыть"><svg class="icon" aria-hidden="true"><use href="#i-close"/></svg></button>
+    </div>
+    <p class="about-version"><strong>Успеватор</strong><span class="subtext"><span>Версия</span> /* APP_VERSION */</span></p>
+    <div class="about-links">
+      <a class="btn btn-quiet" href="https://github.com/hazgon/uspevator" target="_blank" rel="noopener noreferrer">
+        <svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg><span>Репозиторий на GitHub</span>
+      </a>
+      <a class="btn btn-quiet" href="/* APP_SOURCE_URL */" target="_blank" rel="noopener noreferrer">
+        <svg class="icon" aria-hidden="true"><use href="#i-download"/></svg><span>Скачать исходный код этой версии (ZIP)</span>
+      </a>
+    </div>
+    <details class="about-license">
+      <summary id="about-license-label"><span>Лицензия AGPL-3.0</span><svg class="icon chevron" aria-hidden="true"><use href="#i-chev"/></svg></summary>
+      <pre lang="en" translate="no" tabindex="0" aria-labelledby="about-license-label">/* APP_LICENSE */</pre>
+    </details>
   </dialog>
   <script>
 /* APP_JS */
