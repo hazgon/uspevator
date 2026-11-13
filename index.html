@@ -1,0 +1,23 @@
+---
+layout: null
+---
+{%- capture shell -%}{% include_relative build_uspevator/shell.html %}{%- endcapture -%}
+{%- capture manifest -%}{% include_relative android_uspevator/app/AndroidManifest.xml %}{%- endcapture -%}
+{%- assign version = manifest | split: 'android:versionName="' | last | split: '"' | first -%}
+{%- capture license_text -%}{% include_relative LICENSE %}{%- endcapture -%}
+{%- assign license_text = license_text | escape -%}
+{%- assign release_ref = 'refs/tags/v' | append: version -%}
+{%- assign source_ref = site.github.build_revision | default: release_ref -%}
+{%- assign source_url = 'https://github.com/hazgon/uspevator/archive/' | append: source_ref | append: '.zip' -%}
+{%- assign html = shell | replace: '/* APP_VERSION */', version | replace: '/* APP_SOURCE_URL */', source_url -%}
+{%- assign style_parts = html | split: '/* APP_CSS */' -%}
+{%- assign license_parts = style_parts[1] | split: '/* APP_LICENSE */' -%}
+{%- assign script_parts = license_parts[1] | split: '/* APP_JS */' -%}
+{{- style_parts[0] -}}{% include_relative build_uspevator/style.css %}{{- license_parts[0] -}}
+{{- license_text -}}{{- script_parts[0] -}}
+{% include_relative build_uspevator/i18n.js %}
+{% include_relative build_uspevator/core.js %}
+{% include_relative build_uspevator/ui.js %}
+{% include_relative build_uspevator/tests.js %}
+boot();
+{{- script_parts[1] -}}
