@@ -41,7 +41,8 @@ with sync_playwright() as playwright:
     assert chooser.evaluate('(element) => getComputedStyle(element).backgroundColor') == 'rgb(35, 30, 46)'
     page.locator('#template-picker [data-action=close-template-picker]').tap()
     assert page.locator('#chart').is_visible()
-    assert not page.locator('#plan-details').evaluate('(element) => element.open')
+    assert page.locator('#plan-details #planned-start').is_visible()
+    assert page.locator('#plan-details #deadline').is_visible()
     zone = page.locator('.chart .zone-green')
     assert zone.evaluate('(element) => getComputedStyle(element).fill') == 'rgb(36, 63, 54)'
     assert not page.locator('#android-shade-timer').is_visible()

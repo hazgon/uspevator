@@ -3,7 +3,7 @@ const androidBridge = typeof window === 'undefined' ? null : window.UspevatorAnd
 const escapeHtml = value => String(value).replace(/[&<>"']/g, char =>
   ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'})[char]);
 const icon = name => `<svg class="icon" aria-hidden="true"><use href="#i-${name}"/></svg>`;
-let shortDate, minutesLabel, percentLabel;
+let shortDate, minutesLabel, percentLabel, dayLabel;
 const pad = value => String(value).padStart(2, '0');
 
 function selectedLanguage(choice) {
@@ -15,6 +15,8 @@ function setFormats() {
   shortDate = new Intl.DateTimeFormat(appLanguage, {day: 'numeric', month: 'short'});
   minutesLabel = new Intl.NumberFormat(appLanguage, {maximumFractionDigits: 4});
   percentLabel = new Intl.NumberFormat(appLanguage, {maximumFractionDigits: 1});
+  dayLabel = typeof Intl.RelativeTimeFormat === 'function'
+    ? new Intl.RelativeTimeFormat(appLanguage) : null;
 }
 setFormats();
 
@@ -57,17 +59,27 @@ function localDay(ts) {
   return `${String(date.getFullYear()).padStart(4, '0')}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 }
 
-function localDateValue(ts) {
-  if (!isStamp(ts)) return '';
+function clockMinuteAt(ts) {
   const date = new Date(ts);
-  return `${localDay(ts)}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+  return date.getHours() * 60 + date.getMinutes();
 }
 
-function readLocalDate(value, label) {
-  if (!value) return null;
-  const ts = new Date(value).getTime();
-  if (!isStamp(ts) || localDateValue(ts) !== value) throw new Error(t`${label}. Проверьте дату и время.`);
-  return ts;
+function clockText(minute) {
+  return `${pad(Math.floor(minute / 60))}:${pad(minute % 60)}`;
+}
+
+function readClockMinute(value) {
+  const match = /^([01]?\d|2[0-3]):?([0-5]\d)$/.exec(value);
+  return match ? Number(match[1]) * 60 + Number(match[2]) : null;
+}
+
+function clockFieldValue(stamp, minute) {
+  if (isClockMinute(minute)) return clockText(minute);
+  return isStamp(stamp) ? clockText(clockMinuteAt(stamp)) : '';
+}
+
+function planTimeValue(schedule, key) {
+  return clockFieldValue(schedule[key], key === 'start' ? schedule.startMinute : null);
 }
 
 function timeParts(ts, now) {
@@ -81,6 +93,28 @@ function timeParts(ts, now) {
 function fullTime(ts, now) {
   const {time, day} = timeParts(ts, now);
   return day ? `${time} · ${day}` : time;
+}
+
+function planDayOffset(stamp, reference) {
+  return isStamp(stamp) && isStamp(reference) ? localDayIndex(stamp) - localDayIndex(reference) : 0;
+}
+
+function relativePlanDay(offset) {
+  if (offset === 1) return t('через день');
+  if (offset === 2) return t('через два дня');
+  if (dayLabel) return dayLabel.format(offset, 'day');
+  return offset < 0 ? t`${-offset} д назад` : t`через ${offset} д`;
+}
+
+function forecastDay(stamp, reference, length) {
+  const offset = length >= DAY ? planDayOffset(stamp, reference) : 0;
+  return offset ? relativePlanDay(offset) : '';
+}
+
+function planFinishText(stamp, reference, length) {
+  const time = clockFieldValue(stamp) || '—';
+  const day = forecastDay(stamp, reference, length);
+  return day ? t`${day} в ${time}` : time;
 }
 
 function rangeLabel(task) {
@@ -260,6 +294,46 @@ class UIManager {
     return true;
   }
 
+  updatePlanTime(field, key, finished = false) {
+    const raw = field.value.trim();
+    const minute = readClockMinute(raw);
+    const valid = !raw || minute !== null;
+    fieldError($(field.id + '-error'), !valid && finished ? t('Введите время в формате чч:мм.') : '');
+    field.setAttribute('aria-invalid', String(!valid && finished));
+    if (!valid || (raw && !finished && raw.length < 4)) return this.refreshForecast();
+    const normalized = minute === null ? '' : clockText(minute);
+    if (finished) field.value = normalized;
+    const updated = this.commit('UIManager.setPlanTime', (state, now) => {
+      const draft = state.timer.phase === 'idle';
+      if (key === 'start' && !draft) return state;
+      if (planTimeValue(state.window, key) === normalized
+          && !(key === 'start' && minute !== null && state.window.start !== null && !finished)) return state;
+      const planWindow = {...state.window};
+      if (key === 'start') {
+        planWindow.start = null;
+        if (minute === null) delete planWindow.startMinute;
+        else planWindow.startMinute = minute;
+      } else {
+        const length = draft ? metrics(state, now).guardedLeft : 0;
+        const finish = minute === null ? null : deadlineStamp(minute, length, now);
+        if (minute !== null && !isStamp(finish)) {
+          fieldError($(field.id + '-error'), t('Не удалось рассчитать срок плана.'));
+          field.setAttribute('aria-invalid', 'true');
+          return state;
+        }
+        planWindow.finish = finish;
+      }
+      return {...state, window: planWindow};
+    });
+    if (!updated) this.refreshForecast();
+  }
+
+  refreshForecast() {
+    const now = wallTime();
+    const state = this.store.getState();
+    this.renderForecast(state, metrics(state, now), now);
+  }
+
   bind() {
     document.addEventListener('click', event => {
       const menu = $('app-menu');
@@ -280,9 +354,6 @@ class UIManager {
         menu.open = false;
         menu.querySelector('summary').focus();
       }
-    });
-    $('plan-details').addEventListener('toggle', () => {
-      if ($('plan-details').open) this.tick();
     });
     $('add-form').addEventListener('submit', event => {
       event.preventDefault();
@@ -307,20 +378,14 @@ class UIManager {
       }
     });
     $('add-form').addEventListener('input', () => fieldError($('add-error')));
-    $('window-form').addEventListener('submit', event => {
-      event.preventDefault();
-      try {
-        const values = formValues(event.currentTarget);
-        const current = this.store.getState();
-        const start = current.timer.phase === 'idle' ? readLocalDate(values.start, t('Старт')) : current.window.start;
-        const finish = readLocalDate(values.finish, t('Крайний срок'));
-        if (start !== null && finish !== null && finish < start) throw new Error(t('Крайний срок должен быть после старта или совпадать с ним.'));
-        if (this.commit('UIManager.saveWindow', state => ({...state, window: {start, finish}}))) {
-          $('window-details').open = false;
-          this.toast(t('Окно дня сохранено.'));
-        }
-      } catch (error) { this.report('UIManager.saveWindow', error, $('window-error')); }
-    });
+    for (const [id, key] of [['planned-start', 'start'], ['deadline', 'finish']]) {
+      const field = $(id);
+      field.addEventListener('input', () => this.updatePlanTime(field, key));
+      field.addEventListener('blur', () => this.updatePlanTime(field, key, true));
+      field.addEventListener('keydown', event => {
+        if (event.key === 'Enter') field.blur();
+      });
+    }
     $('dialog-form').addEventListener('submit', event => {
       event.preventDefault();
       try {
@@ -548,10 +613,9 @@ class UIManager {
           this.toast(t('Пример загружен. Можно менять задачи и запускать таймер.'));
         }
         break;
-      case 'clear-window':
-        this.commit('UIManager.clearWindow', current => ({
-          ...current, window: {start: current.timer.phase === 'idle' ? null : current.window.start, finish: null}
-        }));
+      case 'start-now':
+        $('planned-start').value = '';
+        this.updatePlanTime($('planned-start'), 'start');
         break;
       case 'save-template':
         this.editTemplate();
@@ -727,7 +791,6 @@ class UIManager {
     $('queue-details').open = true;
     $('add-form').reset();
     $('add-step').open = false;
-    $('window-details').open = false;
     fieldError($('add-error'));
   }
 
@@ -852,7 +915,10 @@ class UIManager {
       this.translateShell();
       $('chart').innerHTML = chartSetup();
       this.lastPoints = null;
-      for (const id of ['add-error', 'window-error', 'dialog-error', 'template-picker-error']) fieldError($(id));
+      for (const id of ['add-error', 'dialog-error', 'template-picker-error']) fieldError($(id));
+      for (const id of ['planned-start', 'deadline']) {
+        if ($(id).getAttribute('aria-invalid') === 'true') fieldError($(id + '-error'), t('Введите время в формате чч:мм.'));
+      }
       $('toast').hidden = true;
     }
     if (operation === 'external') {
@@ -869,10 +935,15 @@ class UIManager {
       this.renderTemplates(state);
     }
     if (state.window !== previous?.window || phaseChanged) {
-      $('planned-start').value = localDateValue(state.window.start);
-      $('deadline').value = localDateValue(state.window.finish);
-      $('planned-start').disabled = state.timer.phase !== 'idle';
-      fieldError($('window-error'));
+      const draft = state.timer.phase === 'idle';
+      for (const [id, key] of [['planned-start', 'start'], ['deadline', 'finish']]) {
+        if (!phaseChanged && operation === 'UIManager.setPlanTime'
+            && planTimeValue(state.window, key) === planTimeValue(previous.window, key)) continue;
+        $(id).value = planTimeValue(state.window, key);
+        fieldError($(id + '-error'));
+        $(id).setAttribute('aria-invalid', 'false');
+      }
+      $('start-preview').hidden = !draft;
     }
     if (languageChanged || state.settings !== previous?.settings) {
       this.renderSound(state.settings);
@@ -880,12 +951,7 @@ class UIManager {
       $('language-choice').value = state.settings.language;
     }
     if (phaseChanged && (state.timer.phase === 'idle' || state.timer.phase === 'done')) $('queue-details').open = true;
-    if ((operation === 'init' || previous?.timer.phase === 'idle')
-        && ['running', 'paused'].includes(state.timer.phase)) {
-      $('queue-details').open = false;
-      $('plan-details').open = false;
-      if (operation !== 'init') window.scrollTo(0, 0);
-    }
+    if (previous?.timer.phase === 'idle' && state.timer.phase === 'running') window.scrollTo(0, 0);
     this.renderControls(state);
     this.tick();
   }
@@ -1009,7 +1075,7 @@ class UIManager {
     this.renderFocus(state, view, now);
     this.renderUndo();
     this.renderBuffer(state, view);
-    if ($('plan-details').open) this.renderForecast(state, view, now);
+    this.renderForecast(state, view, now);
     this.sound.sync();
     if (state.settings.logLevel === 'DEBUG' && state.timer.phase === 'running') {
       log('DEBUG', 'Timer.tick', t('Таймер обновлён'), {
@@ -1045,18 +1111,22 @@ class UIManager {
       display($('phase-label').lastElementChild, view.pauseMs === null ? t('На паузе') : t`Пауза ${fmtCountdown(view.pauseMs)}`);
     }
 
-    const scheduled = draft && state.window.start !== null;
+    const scheduled = draft && (view.previewStart !== null || state.window.start !== null);
     const current = draft ? now + view.baselineMs + view.bufferMs : view.guarded;
     const showForecast = view.hasPlan && (!draft || (scheduled && current !== view.protectedFinish));
     const delta = (done ? finishedAt : view.guarded) - view.protectedFinish;
     $('focus-commitment').hidden = !view.hasPlan;
     display($('focus-promise-label'), draft ? (scheduled ? t('Финиш по плану') : t('Финиш с запасом')) : t('Обещано к'));
-    display($('focus-promise-time'), fullTime(view.protectedFinish, now));
+    const planLength = view.baselineMs + view.bufferMs;
+    const plannedAt = view.previewStart ?? state.window.start ?? now;
+    display($('focus-promise-time'), draft ? planFinishText(view.protectedFinish, plannedAt, planLength)
+      : fullTime(view.protectedFinish, now));
     $('focus-forecast').hidden = !showForecast;
     $('focus-forecast').dataset.warn = String(!done && (view.estimateExhausted || (!draft && delta >= 60_000)));
     display($('focus-forecast-label'), done ? t('Завершено в') : draft ? t('Если начать сейчас')
       : phase === 'paused' ? t('Если продолжить сейчас') : t('Прогноз с запасом'));
-    display($('focus-forecast-time'), view.estimateExhausted ? t('Нужна оценка') : fullTime(current, now));
+    display($('focus-forecast-time'), view.estimateExhausted ? t('Нужна оценка')
+      : draft ? planFinishText(current, now, planLength) : fullTime(current, now));
     $('remaining-btn').hidden = !view.estimateExhausted;
     const risk = t(RISK_COPY[view.risk][0]);
     $('risk-strip-marker').style.left = String(view.riskPosition) + '%';
@@ -1065,12 +1135,13 @@ class UIManager {
     let hint = '';
     if (done) hint = delta === 0 ? t('Завершено ровно к обещанному времени.')
       : delta < 0 ? t`Раньше обещанного на ${duration(delta, true)}.` : t`Позже обещанного на ${duration(delta, true)}.`;
-    else if (draft && scheduled) hint = now > state.window.start + 1000
+    else if (draft && state.window.start !== null && view.previewStart === null) hint = now > state.window.start + 1000
       ? t`Задержка старта · ${duration(now - state.window.start, true)}`
       : t`Плановый старт · ${fullTime(state.window.start, now)}`;
     else if (!draft && !view.estimateExhausted && delta >= 60_000) hint = t`Прогноз позже обещанного на ${duration(delta)}.`;
     $('focus-hint').hidden = !hint;
-    $('focus-hint').dataset.warn = String((!draft && delta >= 60_000) || (draft && scheduled && now > state.window.start + 1000));
+    $('focus-hint').dataset.warn = String((!draft && delta >= 60_000)
+      || (draft && state.window.start !== null && view.previewStart === null && now > state.window.start + 1000));
     display($('focus-hint'), hint);
   }
 
@@ -1127,31 +1198,64 @@ class UIManager {
   }
 
   renderForecast(state, view, now) {
-    const done = state.timer.phase === 'done';
-    display($('earliest-label'), done ? t('Фактический финиш') : view.estimateExhausted ? t('Нижняя граница') : t('По базовой оценке'));
-    display($('guarded-label'), done ? t('Изначально с запасом') : view.estimateExhausted ? t('Уточните остаток') : t('С запасом задач'));
-    for (const [key, stamp] of [['earliest', view.earliest], ['guarded', done ? view.protectedFinish : view.estimateExhausted ? null : view.guarded]]) {
-      const {time, day} = timeParts(stamp, now);
-      display($(`${key}-time`), time);
+    const {phase, startedAt} = state.timer;
+    const draft = phase === 'idle';
+    const done = phase === 'done';
+    $('planned-start').placeholder = clockText(clockMinuteAt(now));
+    $('start-now').setAttribute('aria-pressed', String(view.previewStart === null && state.window.start === null));
+    $('duration-row').hidden = !draft;
+    $('promised-row').hidden = draft || done;
+    display($('earliest-duration'), view.hasPlan ? duration(view.baselineMs, true) : '—');
+    display($('guarded-duration'), view.hasPlan ? duration(view.baselineMs + view.bufferMs, true) : '—');
+    display($('earliest-label'), done ? t('Фактический финиш') : view.estimateExhausted ? t('Нижняя граница') : t('Оптимистично'));
+    display($('guarded-label'), done ? t('Обещанный финиш') : view.estimateExhausted ? t('Уточните остаток') : t('С запасом'));
+    const startText = $('planned-start').value.trim();
+    const editingStart = draft && startText && readClockMinute(startText) === null;
+    const at = draft ? (view.previewStart ?? Math.max(now, state.window.start ?? now)) : now;
+    for (const [key, stamp, length, reference] of [
+      ['earliest', view.earliest, done ? view.earliest - startedAt : view.workLeft, done ? startedAt : at],
+      ['guarded', done ? view.protectedFinish : view.estimateExhausted ? null : view.guarded,
+        done ? view.baselineMs + view.bufferMs : view.guardedLeft, done ? startedAt : at]
+    ]) {
+      const day = editingStart ? '' : forecastDay(stamp, reference, length);
+      display($(`${key}-time`), (!editingStart && clockFieldValue(stamp)) || '—');
       display($(`${key}-day`), day);
       $(`${key}-day`).hidden = !day;
     }
-    display($('protected-time'), fullTime(view.protectedFinish, now));
-    const status = deadlineStatus(view, state.window.finish, state.timer.phase);
+    display($('protected-time'), planFinishText(view.protectedFinish, startedAt, view.baselineMs + view.bufferMs));
+    const deadline = $('deadline');
+    const finish = readClockMinute(deadline.value.trim()) === null || deadline.getAttribute('aria-invalid') === 'true'
+      ? null : state.window.finish;
+    const hasDeadline = isStamp(finish);
+    const length = view.baselineMs + view.bufferMs;
+    const latest = hasDeadline ? latestPlanStart(finish, length) : null;
+    const showAnswer = draft && view.hasPlan && isStamp(latest);
+    $('deadline-answer').hidden = !showAnswer;
+    $('deadline-fit').hidden = !hasDeadline || showAnswer;
+    if (showAnswer) {
+      const day = forecastDay(finish, latest, length);
+      const target = clockFieldValue(finish);
+      display($('deadline-phrase'), day ? t`Гарантированно закончим ${day} к ${target},`
+        : t`Гарантированно закончим к ${target},`);
+      display($('latest-start'), planFinishText(latest, now, Math.abs(latest - now)));
+      const late = now >= latest + MINUTE;
+      $('latest-start-note').hidden = !late;
+      display($('latest-start-note'), late ? t`Старт с полным запасом был ${duration(now - latest)} назад.` : '');
+      return;
+    }
+    if (!hasDeadline) return;
+    const status = deadlineStatus(view, finish, phase);
     $('deadline-fit').dataset.tone = status.tone;
     display($('fit-label'), t(status.label));
     let detail = status.detail ? t(status.detail) : '';
     if (status.margin !== undefined) {
       const span = duration(status.margin, true);
-      const finish = fullTime(state.window.finish, now);
-      detail = status.margin === 0 ? t`Ровно к сроку ${finish}.`
-        : status.margin < 0 ? t`До срока ${finish} не хватает ${span}.`
-        : t`До срока ${finish} остаётся ${span}.`;
+      const target = planFinishText(finish, now, Math.abs(finish - now));
+      detail = status.margin === 0 ? t`Ровно к сроку ${target}.`
+        : status.margin < 0 ? t`До срока ${target} не хватает ${span}.`
+        : t`До срока ${target} остаётся ${span}.`;
     }
     display($('fit-detail'), detail);
-    const {start, finish} = state.window;
-    const windowParts = [start === null ? '' : t`с ${fullTime(start, now)}`, finish === null ? '' : t`до ${fullTime(finish, now)}`].filter(Boolean);
-    display($('window-mini'), windowParts.join(' '));
   }
 }
 

@@ -98,6 +98,33 @@ function runSelfTests() {
     equal(view.guarded, T + 55 * mins);
   });
 
+  test('Пример времени старта меняет прогноз и не расходует буфер', () => {
+    const now = localClockStamp(12 * 60, T);
+    const draft = {...example(), window: {start: null, finish: localClockStamp(13 * 60, now), startMinute: 8 * 60 + 10}};
+    const loaded = parseImport(JSON.stringify(exportBackup(draft, now))).state;
+    const view = metrics(loaded, now);
+    equal(view.earliest, localClockStamp(8 * 60 + 40, now));
+    equal(view.guarded, localClockStamp(9 * 60 + 5, now));
+    equal(view.spentMs, 0);
+    const started = Timer.startTimer(loaded, now);
+    equal(started.timer.startedAt, now);
+    equal(started.window.finish, localClockStamp(13 * 60, now));
+    equal(metrics(started, now).protectedFinish, now + 55 * mins);
+  });
+
+  test('Последний старт округляется вниз и учитывает полночь и длинные планы', () => {
+    const now = localClockStamp(21 * 60, T);
+    const midnight = deadlineStamp(30, 75.5 * mins, now);
+    equal(midnight, localClockStamp(30, now, 1));
+    equal(latestPlanStart(midnight, 75.5 * mins), localClockStamp(23 * 60 + 14, now));
+    const length = (44 * 60 + 45) * mins;
+    const deadline = deadlineStamp(14 * 60 + 30, length, now);
+    equal(deadline, localClockStamp(14 * 60 + 30, now, 2));
+    equal(latestPlanStart(deadline, length), localClockStamp(17 * 60 + 45, now));
+    equal(forecastDay(deadline, now, length), t('через два дня'));
+    equal(forecastDay(midnight, now, 75.5 * mins), '');
+  });
+
   test('Перестановка сохраняет прогноз и общий резерв', () => {
     const original = example();
     const moved = TaskManager.moveTask(original, 'a', null);

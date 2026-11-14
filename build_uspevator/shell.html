@@ -35,7 +35,6 @@
     <symbol id="i-chev" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
     <symbol id="i-upload" viewBox="0 0 24 24"><path d="M12 16V4m-5 5 5-5 5 5M4 16v4h16v-4"/></symbol>
     <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 4v12m-5-5 5 5 5-5M4 17v3h16v-3"/></symbol>
-    <symbol id="i-calendar" viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M8 3v4m8-4v4M4 10h16M8 14h2m4 0h2"/></symbol>
     <symbol id="i-list" viewBox="0 0 24 24"><path d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01" /></symbol>
     <symbol id="i-more" viewBox="0 0 24 24"><path d="M5 12h.01m7 0h.01m7 0h.01" stroke-width="3"/></symbol>
     <symbol id="i-bolt" viewBox="0 0 24 24"><path d="m13 3-9 11h7l-1 7 10-11h-7z"/></symbol>
@@ -233,37 +232,53 @@
     </details>
     </div>
 
-    <details class="plan-details" id="plan-details">
-      <summary class="disclosure-head" id="plan-disclosure">
-        <svg class="icon" aria-hidden="true"><use href="#i-clock"/></svg><strong>Сроки плана</strong>
-        <svg class="icon chevron" aria-hidden="true"><use href="#i-chev"/></svg>
-      </summary>
-      <section class="card forecast" aria-labelledby="forecast-heading">
-        <div class="card-head">
-          <div class="title-line"><span class="section-icon"><svg class="icon" aria-hidden="true"><use href="#i-clock"/></svg></span><h2 id="forecast-heading">Прогноз финиша</h2></div>
-        </div>
-        <div class="finish-grid">
-          <div class="finish-box"><span id="earliest-label">По базовой оценке</span><strong id="earliest-time">—</strong><small id="earliest-day" hidden></small></div>
-          <div class="finish-box"><span id="guarded-label">С запасом задач</span><strong id="guarded-time">—</strong><small id="guarded-day" hidden></small></div>
-        </div>
-        <div class="protected-row"><span>Обещанный финиш</span><strong id="protected-time">—</strong></div>
-        <div class="fit" id="deadline-fit" data-tone="neutral">
-          <span class="dot"></span><div><strong id="fit-label">Срок не задан</strong><p id="fit-detail">Укажите, к какому времени нужно закончить.</p></div>
-        </div>
-        <details id="window-details" class="window-details">
-          <summary><svg class="icon" aria-hidden="true"><use href="#i-calendar"/></svg><span>Окно дня</span><span id="window-mini" class="window-mini"></span><svg class="icon chevron" aria-hidden="true"><use href="#i-chev"/></svg></summary>
-          <form id="window-form" class="window-form" novalidate>
-            <label class="field"><span>Запланированный старт</span><input id="planned-start" name="start" type="datetime-local"></label>
-            <label class="field"><span>Крайний срок</span><input id="deadline" name="finish" type="datetime-local"></label>
-            <p class="field-error" id="window-error" role="alert" hidden></p>
-            <div class="row-buttons">
-              <button class="btn btn-soft" type="submit">Сохранить окно</button>
-              <button class="btn btn-quiet" type="button" data-action="clear-window">Очистить</button>
+    <section class="card plan-details" id="plan-details" aria-labelledby="forecast-heading">
+      <div class="card-head">
+        <div class="title-line"><span class="section-icon"><svg class="icon" aria-hidden="true"><use href="#i-clock"/></svg></span><h2 id="forecast-heading">Сроки плана</h2></div>
+      </div>
+      <div class="timing-layout">
+        <div class="timing-forward">
+          <div id="start-preview">
+            <div class="timing-field field">
+              <label for="planned-start">Если начать в</label>
+              <input id="planned-start" inputmode="numeric" maxlength="5" autocomplete="off" placeholder="чч:мм" aria-describedby="planned-start-error">
+              <button class="btn btn-soft" id="start-now" type="button" data-action="start-now" aria-pressed="true">Сейчас</button>
             </div>
-          </form>
-        </details>
-      </section>
-    </details>
+            <p class="field-error" id="planned-start-error" role="alert" hidden></p>
+          </div>
+          <table class="finish-table" aria-label="Прогноз финиша">
+            <thead>
+              <tr><td></td><th id="earliest-label" scope="col">Оптимистично</th><th id="guarded-label" scope="col">С запасом</th></tr>
+            </thead>
+            <tbody>
+              <tr id="duration-row"><th scope="row">Длительность</th><td id="earliest-duration">—</td><td id="guarded-duration">—</td></tr>
+              <tr class="finish-time-row">
+                <th scope="row">Финиш</th>
+                <td><small id="earliest-day" hidden></small><strong id="earliest-time">—</strong></td>
+                <td><small id="guarded-day" hidden></small><strong id="guarded-time">—</strong></td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="protected-row" id="promised-row" hidden><span>Обещано к</span><strong id="protected-time">—</strong></div>
+        </div>
+        <div class="timing-deadline">
+          <div class="timing-field field">
+            <label for="deadline">Успеть</label><span class="timing-to" aria-hidden="true">к</span>
+            <input id="deadline" inputmode="numeric" maxlength="5" autocomplete="off" placeholder="чч:мм" aria-label="Успеть к" aria-describedby="deadline-error">
+          </div>
+          <p class="field-error" id="deadline-error" role="alert" hidden></p>
+          <div class="deadline-answer" id="deadline-answer" role="status" hidden>
+            <p id="deadline-phrase"></p>
+            <div class="deadline-start"><span>если начнём не позже</span><strong id="latest-start">—</strong></div>
+            <p class="subtext">По оценке с полным запасом</p>
+            <p class="subtext" id="latest-start-note" hidden></p>
+          </div>
+          <div class="fit" id="deadline-fit" data-tone="neutral" hidden>
+            <span class="dot"></span><div><strong id="fit-label"></strong><p id="fit-detail"></p></div>
+          </div>
+        </div>
+      </div>
+    </section>
     <footer class="footer"><span>Успеватор</span><span><span class="dot"></span> Данные хранятся на устройстве</span></footer>
   </main>
   <div id="toast" class="toast" role="status" hidden></div>
@@ -340,7 +355,8 @@
       <p><strong>Заметить отставание, пока ещё можно успеть.</strong> Допустим, выйти нужно в 9:00. В 8:10 кофе допит, а на остальные сборы по плану нужно 55 минут. Прогноз показывает 9:05. Вы видите, сколько минут нужно наверстать, и ещё можете ускориться или изменить план.</p>
       <h3>Составьте план с общим запасом</h3>
       <p>Добавьте дела в порядке выполнения. Укажите время при хорошем темпе и время с запасом. Например, 10 и 15 минут. Эти пять минут прибавятся к общему запасу списка. Если одно дело займёт меньше времени, выигранные минуты пригодятся на другое.</p>
-      <p>В разделе «Сроки плана» откройте «Окно дня», чтобы указать время старта и крайний срок. Для задачи, к которой трудно приступить, запишите первое конкретное действие. Например, «открыть письмо и выписать вопросы».</p>
+      <p>В «Сроках плана» укажите, во сколько хотите начать, чтобы увидеть два времени финиша. В поле «Успеть» задайте срок, и приложение покажет, когда нужно начать, чтобы хватило времени на все дела и запас.</p>
+      <p>Для задачи, к которой трудно приступить, запишите первое конкретное действие. Например, «открыть письмо и выписать вопросы».</p>
       <h3>Следите за задачей и временем финиша</h3>
       <p>Запустите таймер. Он показывает два отсчёта для текущего дела. После оптимистичной оценки звучит сигнал. Пока тратится запас этой задачи, сигнал учащается. Непрерывный звук означает, что запас задачи закончился. Нажмите «Готово», чтобы перейти к следующему делу.</p>
       <p>«Обещано к» показывает время финиша, рассчитанное на старте. Сверяйте его с текущим прогнозом и своим крайним сроком. Если оценка текущей задачи закончилась, нажмите «Уточнить остаток» и введите, сколько времени ещё нужно.</p>

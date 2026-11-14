@@ -7,6 +7,8 @@ import org.json.JSONObject;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.time.Instant;
+import java.time.ZoneId;
 import java.util.Locale;
 
 /** Native clock and transitions shared by the widget and background signal. */
@@ -64,6 +66,12 @@ final class PlanState {
 
     static boolean validDate(long time) {
         return time >= 0 && time <= MAX_DATE;
+    }
+
+    private static long localClockStamp(int minutes, long reference) {
+        ZoneId zone = ZoneId.systemDefault();
+        return Instant.ofEpochMilli(reference).atZone(zone).toLocalDate()
+            .atTime(minutes / 60, minutes % 60).atZone(zone).toInstant().toEpochMilli();
     }
 
     String phase() { return timer.optString("phase"); }
@@ -179,9 +187,13 @@ final class PlanState {
         }
         view.baseline = draft ? nominal : timer.getLong("baselineMs");
         view.buffer = draft ? reserve : timer.getLong("bufferMs");
-        view.scheduled = draft && !window.isNull("start");
-        long anchor = draft ? (view.scheduled ? window.getLong("start") : now) : timer.getLong("startedAt");
-        long at = done ? timer.getLong("finishedAt") : Math.max(now, anchor);
+        int startMinute = window.optInt("startMinute", -1);
+        boolean preview = draft && startMinute >= 0 && startMinute < 24 * 60;
+        view.scheduled = draft && (preview || !window.isNull("start"));
+        long anchor = draft ? (preview ? localClockStamp(startMinute, now)
+            : window.isNull("start") ? now : window.getLong("start"))
+            : timer.getLong("startedAt");
+        long at = done ? timer.getLong("finishedAt") : preview ? anchor : Math.max(now, anchor);
         view.promise = anchor + view.baseline + view.buffer;
         view.forecast = draft ? now + view.baseline + view.buffer : at + guardedLeft;
         view.earliest = at + workLeft;

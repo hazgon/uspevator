@@ -1,6 +1,7 @@
 'use strict';
 
 const MINUTE = 60_000;
+const DAY = 24 * 60 * MINUTE;
 const STORAGE_KEY = 'uspevator_data';
 const VERSION = 1;
 const BACKUP_FORMAT = 'uspevator-backup';
@@ -14,6 +15,7 @@ const asMs = minutes => Math.round(minutes * MINUTE);
 const isObject = value => value !== null && typeof value === 'object' && !Array.isArray(value);
 const isDuration = value => Number.isSafeInteger(value) && value >= 0;
 const isStamp = value => isDuration(value) && value <= MAX_TIMESTAMP;
+const isClockMinute = value => Number.isInteger(value) && value >= 0 && value < DAY / MINUTE;
 const wallTime = () => Date.now();
 
 function uid() {
@@ -91,6 +93,30 @@ function planTotals(tasks) {
   return {baselineMs, bufferMs};
 }
 
+function localClockStamp(minutes, reference, dayOffset = 0) {
+  const date = new Date(reference);
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate() + dayOffset,
+    Math.floor(minutes / 60), minutes % 60).getTime();
+}
+
+function localDayIndex(stamp) {
+  return Math.floor((stamp - new Date(stamp).getTimezoneOffset() * MINUTE) / DAY);
+}
+
+function deadlineStamp(minutes, durationMs, now) {
+  const reference = Math.floor(now / MINUTE) * MINUTE;
+  const offset = Math.floor(durationMs / DAY);
+  const target = localClockStamp(minutes, reference, offset);
+  // Multi-day plans use the first deadline that allows a start on the reference day.
+  if (offset > 0) return target - durationMs < localClockStamp(0, reference)
+    ? localClockStamp(minutes, reference, offset + 1) : target;
+  return target >= reference ? target : localClockStamp(minutes, reference, 1);
+}
+
+function latestPlanStart(finish, durationMs) {
+  return Math.floor((finish - durationMs) / MINUTE) * MINUTE;
+}
+
 function activeTask(state) {
   return state.tasks.find(task => task.id === state.timer.activeId) || null;
 }
@@ -148,8 +174,10 @@ function metrics(state, now) {
   const included = tasks.filter(task => !task.excluded);
   const totals = planTotals(included);
   const {baselineMs, bufferMs} = draft ? totals : timer;
-  const anchor = draft ? (state.window.start ?? now) : timer.startedAt;
-  const at = done ? timer.finishedAt : Math.max(now, anchor);
+  const previewStart = draft && isClockMinute(state.window.startMinute)
+    ? localClockStamp(state.window.startMinute, now) : null;
+  const anchor = draft ? (previewStart ?? state.window.start ?? now) : timer.startedAt;
+  const at = done ? timer.finishedAt : previewStart ?? Math.max(now, anchor);
   let earned = 0;
   let completed = 0;
   let workLeft = 0;
@@ -189,7 +217,7 @@ function metrics(state, now) {
     task, timing, activeElapsed: timing?.elapsed ?? 0,
     activeLeft: timing === null ? null : Math.max(0, timing.optimistic), baselineMs, bufferMs, hasPlan,
     spentMs, remainingMs, penetration, percentLeft, progress, completed,
-    remainingTasks: included.length - completed, workLeft,
+    remainingTasks: included.length - completed, workLeft, guardedLeft, previewStart,
     pauseMs: timer.phase === 'paused' && timer.pausedSince != null ? Math.max(0, now - timer.pausedSince) : null,
     earliest, guarded, protectedFinish, estimateExhausted, risk: riskAt(progress, penetration, spentMs),
     riskPosition: riskPosition(progress, penetration, spentMs),
@@ -494,10 +522,10 @@ function readState(raw, createId = uid) {
     }
     return {...fields, id, workedMs, referenceMs, remainingMs, done, ...(excluded ? {excluded: true} : {})};
   });
-  const dayWindow = raw.window;
-  if (!isObject(dayWindow) || ![dayWindow.start, dayWindow.finish].every(value => value === null || isStamp(value))
-      || (dayWindow.start !== null && dayWindow.finish !== null && dayWindow.finish < dayWindow.start)) {
-    throw new Error(t('Некорректное окно дня.'));
+  const schedule = raw.window;
+  if (!isObject(schedule) || ![schedule.start, schedule.finish].every(value => value === null || isStamp(value))
+      || (schedule.startMinute !== undefined && !isClockMinute(schedule.startMinute))) {
+    throw new Error(t('Некорректные сроки плана.'));
   }
   const settings = raw.settings;
   if (!isObject(settings) || typeof settings.sound !== 'boolean' || !LEVELS.includes(settings.logLevel)) {
@@ -505,7 +533,10 @@ function readState(raw, createId = uid) {
   }
   return {
     version: VERSION, tasks, templates: readTemplates(raw.templates, createId, true), pastRuns: readPastRuns(raw.pastRuns),
-    timer: readTimer(raw.timer, tasks), window: {start: dayWindow.start, finish: dayWindow.finish},
+    timer: readTimer(raw.timer, tasks), window: {
+      start: schedule.start, finish: schedule.finish,
+      ...(schedule.startMinute === undefined ? {} : {startMinute: schedule.startMinute})
+    },
     settings: {sound: settings.sound, logLevel: settings.logLevel, language: normalizeLanguage(settings.language)}
   };
 }

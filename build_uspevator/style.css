@@ -169,7 +169,6 @@ svg { display: block; }
 #undo-finish { margin-top: 4px; min-height: 40px; }
 .planning-layout { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr); align-items: start; gap: 13px; margin-top: 13px; }
 .plan-details { margin-top: 13px; }
-.plan-details > .forecast { margin-top: 10px; }
 .disclosure-head { min-height: 44px; gap: 9px; }
 .disclosure-head > * + * { margin-left: 5px; }
 .disclosure-head > .chevron { margin-left: auto; }
@@ -182,7 +181,6 @@ svg { display: block; }
 .template-tools > .btn { margin: 0 4px 4px 0; }
 #templates-done-note { margin-bottom: 7px; }
 #template-list { margin-top: 8px; }
-#plan-disclosure { color: var(--accent-ink); padding: 0 10px; }
 .task-menu-info { margin-bottom: 9px; overflow-wrap: anywhere; }
 .task-menu-info p + p { margin-top: 4px; }
 .task-menu-actions { display: grid; gap: 6px; }
@@ -276,11 +274,32 @@ svg { display: block; }
 .fact-time { flex: 0 0 auto; color: #38634b; font-weight: 700; font-size: .78rem; font-variant-numeric: tabular-nums; text-align: right; }
 
 .sidebar { display: grid; gap: 18px; min-width: 0; }
-.finish-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
-.finish-box { min-width: 0; padding: 10px 11px; border: 1px solid #eee9f5; border-radius: 12px; background: #faf8fd; }
-.finish-box span { display: block; color: var(--muted); font-size: .75rem; line-height: 1.3; }
-.finish-box strong { display: block; margin-top: 3px; font-size: 1.44rem; line-height: 1.12; letter-spacing: -.045em; font-variant-numeric: tabular-nums; }
-.finish-box small { display: block; margin-top: 3px; color: var(--muted); font-size: .73rem; }
+.timing-layout { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+.timing-forward, .timing-deadline { min-width: 0; }
+.timing-deadline { padding-left: 18px; border-left: 1px solid var(--line); }
+.timing-field { display: flex; align-items: center; gap: 6px; }
+.timing-field label { margin-right: auto; font-weight: 670; }
+.timing-field input { width: 4.8em; padding: 7px 6px; text-align: center; font-variant-numeric: tabular-nums; }
+.timing-field input[aria-invalid="true"] { border-color: var(--tone-dot, #b74766); }
+.timing-field .btn { padding-inline: 9px; }
+.timing-field .btn[aria-pressed="false"] { background: transparent; border-color: var(--line); }
+.timing-to { color: var(--muted); }
+:root[lang="en"] .timing-to { display: none; }
+.finish-table { width: 100%; table-layout: fixed; border-collapse: collapse; margin-top: 9px; }
+.finish-table th, .finish-table td { padding: 2px 6px; text-align: left; vertical-align: bottom; }
+.finish-table th:first-child, .finish-table td:first-child { width: 35%; padding-left: 0; }
+.finish-table th:last-child, .finish-table td:last-child { width: 27%; padding-right: 0; }
+.finish-table th { color: var(--muted); font-size: .76rem; font-weight: 600; overflow-wrap: break-word; }
+.finish-table td { font-size: .84rem; font-variant-numeric: tabular-nums; }
+.finish-time-row small { display: block; color: var(--muted); font-size: .72rem; }
+.finish-time-row strong, .deadline-start strong {
+  display: block; font-size: 1.58rem; line-height: 1.15; letter-spacing: -.03em; font-variant-numeric: tabular-nums;
+}
+#guarded-time { color: var(--accent-ink); }
+.deadline-answer { padding: 9px 11px; border-radius: 11px; background: var(--accent-soft); color: var(--accent-ink); font-size: .86rem; }
+.deadline-answer, .timing-deadline .fit { margin-top: 8px; }
+.deadline-start { display: flex; flex-wrap: wrap; align-items: baseline; gap: 3px 8px; justify-content: space-between; margin: 2px 0; }
+.deadline-answer .subtext { font-size: .73rem; }
 .protected-row { display: flex; justify-content: space-between; align-items: baseline; gap: 7px; padding: 9px 1px; font-size: .79rem; color: var(--muted); }
 .protected-row strong { color: var(--ink); text-align: right; font-variant-numeric: tabular-nums; }
 .fit { display: flex; align-items: start; gap: 7px; padding: 9px 10px; border-radius: 11px; background: var(--tone-bg); color: var(--tone-ink); font-size: .79rem; }
@@ -290,11 +309,6 @@ summary { list-style: none; display: flex; align-items: center; min-width: 0; cu
 summary::-webkit-details-marker { display: none; }
 summary .chevron { width: 16px; height: 16px; margin-left: auto; transition: transform .16s; }
 details[open] > summary .chevron { transform: rotate(180deg); }
-.window-details { margin-top: 11px; }
-.window-details summary { gap: 7px; padding: 5px 1px; color: var(--accent-ink); min-height: 36px; font-size: .84rem; }
-.window-details summary .icon { width: 16px; height: 16px; }
-.window-mini { color: var(--muted); font-weight: 500; font-size: .73rem; overflow-wrap: anywhere; }
-.window-form { display: grid; gap: 8px; margin-top: 8px; }
 .row-buttons { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 .count-badge { display: grid; place-items: center; min-width: 25px; padding: 3px 6px; border-radius: 8px; color: var(--accent-ink); background: var(--accent-soft); font-size: .75rem; font-weight: 720; }
 .template-item { border: 1px solid var(--line); border-radius: 11px; margin-top: 6px; }
@@ -391,7 +405,7 @@ dialog::backdrop { background: #24183f69; }
 [data-theme="dark"] .chart .trend { stroke: #ccb1ff; }
 [data-theme="dark"] .chart .point, [data-theme="dark"] .chart .live-dot { fill: #b38ff1; stroke: #231e2e; }
 [data-theme="dark"] .chart .live-halo { fill: #c8a9ff46; }
-[data-theme="dark"] .add-form, [data-theme="dark"] .finish-box,
+[data-theme="dark"] .add-form,
 [data-theme="dark"] .drop-tail, [data-theme="dark"] .template-task { background: #2b2339; border-color: var(--line); }
 [data-theme="dark"] .field input, [data-theme="dark"] .field select { background: #1c1728; border-color: #574961; }
 [data-theme="dark"] .field input:disabled { background: #342c40; }
@@ -415,7 +429,9 @@ dialog::backdrop { background: #24183f69; }
   .add-fields .field:first-child { grid-column: 1 / -1; }
 }
 @media (max-width: 690px) {
-  .planning-layout { grid-template-columns: minmax(0, 1fr); }
+  .planning-layout, .timing-layout { grid-template-columns: minmax(0, 1fr); }
+  .timing-layout { gap: 11px; }
+  .timing-deadline { border-left: 0; border-top: 1px solid var(--line); padding: 10px 0 0; }
   .container { width: calc(100% - 28px); }
   .top-inner { min-height: 54px; }
   .top-actions .btn { min-height: 44px; }
@@ -437,6 +453,9 @@ dialog::backdrop { background: #24183f69; }
   .focus-title h1 { font-size: 1.4rem; }
   .card:not(.focus) { padding: 13px; }
   .card { border-radius: 17px; }
+  .finish-table th, .finish-table td { padding-inline: 4px; }
+  .finish-table th { font-size: .71rem; }
+  .timing-field input { width: 4.3em; }
   .buffer h2 { font-size: 1.02rem; }
   .buffer-head { gap: 5px; }
   .buffer-head .title-line { gap: 6px; }

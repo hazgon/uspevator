@@ -31,7 +31,8 @@ def check_language_and_chart(browser, source, system_locale, expected):
         assert page.locator('#chart').is_visible()
         assert page.locator('#chart polygon').count() == 3
         assert page.evaluate("document.querySelector('.focus').nextElementSibling.matches('.buffer')")
-        assert not page.locator('#plan-details').evaluate('(element) => element.open')
+        assert page.locator('#plan-details').is_visible()
+        assert page.locator('#plan-details #deadline').is_visible()
         assert page.evaluate('document.documentElement.scrollWidth <= innerWidth')
 
     assert page.locator('html').get_attribute('lang') == expected
